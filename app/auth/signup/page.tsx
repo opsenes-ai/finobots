@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <Card>
       <CardHeader>
@@ -37,11 +41,46 @@ export default function SignupPage() {
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                required
+                className="pr-9"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
+            </div>
           </div>
           <Button type="submit" className="w-full">
             Sign up
           </Button>
+          <p className="text-center text-sm text-muted-foreground">
+            By signing up, you agree to our{" "}
+            <Link
+              href="/legal/terms"
+              className="font-medium text-foreground hover:underline"
+            >
+              Terms
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/legal/privacy"
+              className="font-medium text-foreground hover:underline"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </p>
         </form>
       </CardContent>
       <CardFooter className="justify-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,10 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+  InputOTPSeparator,
+} from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 
 export default function VerifyPage() {
+  const [value, setValue] = useState("");
+
   return (
     <Card>
       <CardHeader>
@@ -26,14 +33,26 @@ export default function VerifyPage() {
         <form className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Verification code</Label>
-            <Input
+            <InputOTP
               id="code"
-              type="text"
-              placeholder="Enter the 6-digit code"
-              required
-            />
+              maxLength={6}
+              value={value}
+              onChange={(val) => setValue(val)}
+            >
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+              </InputOTPGroup>
+              <InputOTPSeparator />
+              <InputOTPGroup>
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full" disabled={value.length < 6}>
             Verify
           </Button>
         </form>
