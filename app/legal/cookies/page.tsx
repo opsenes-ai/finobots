@@ -3,12 +3,7 @@ export default function CookiesPage() {
     <>
       <h1>Cookie Policy</h1>
       <p className="text-sm text-muted-foreground">
-        Last updated:{" "}
-        {new Date().toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
+        Last updated: November 8, 2026
       </p>
 
       <h2>1. Introduction</h2>
