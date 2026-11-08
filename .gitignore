@@ -32,6 +32,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# os
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
 # vercel
 .vercel
