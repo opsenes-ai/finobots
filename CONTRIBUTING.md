@@ -107,7 +107,7 @@ docs(readme): update installation instructions
 
 ## Reporting Bugs
 
-Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues) with:
+Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with:
 
 - A clear title and description
 - Steps to reproduce
@@ -117,7 +117,7 @@ Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues) with:
 
 ## Requesting Features
 
-Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues) with the `enhancement` label. Describe the feature, why it would be useful, and any alternatives you have considered.
+Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with the `enhancement` label. Describe the feature, why it would be useful, and any alternatives you have considered.
 
 ## Code of Conduct
 

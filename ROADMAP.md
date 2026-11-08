@@ -101,6 +101,6 @@ This document outlines the planned direction and milestones for Finobots.
 
 ## Feedback
 
-Have a feature request or suggestion? Open an [issue](https://github.com/opsenes-ai/finobots/issues) on GitHub or start a [discussion](https://github.com/opsenes-ai/finobots/discussions).
+Have a feature request or suggestion? Open an [issue](https://github.com/opsenes-ai/finobots/issues/new) on GitHub or start a [discussion](https://github.com/opsenes-ai/finobots/discussions).
 
 This roadmap is subject to change based on community feedback and project priorities.

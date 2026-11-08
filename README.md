@@ -109,5 +109,6 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ## Links
 
 - [GitHub Repository](https://github.com/opsenes-ai/finobots)
-- [Report a Bug](https://github.com/opsenes-ai/finobots/issues)
-- [Request a Feature](https://github.com/opsenes-ai/finobots/issues)
+- [Report a Bug](https://github.com/opsenes-ai/finobots/issues/new)
+- [Request a Feature](https://github.com/opsenes-ai/finobots/issues/new)
+- [Discussions](https://github.com/opsenes-ai/finobots/discussions)
