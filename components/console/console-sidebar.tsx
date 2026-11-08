@@ -3,15 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock, Plus, Settings, Wallet, TrendingUp, Link as LinkIcon } from "lucide-react";
+import { Clock, Plus, Wallet, TrendingUp, Link as LinkIcon, Receipt } from "lucide-react";
 
 const navItems = [
   { href: "/console/new", label: "New Chat", icon: Plus },
   { href: "/console/recents", label: "Recents", icon: Clock },
   { href: "/console/accounts", label: "Accounts", icon: Wallet },
   { href: "/console/cashflow", label: "Cashflow", icon: TrendingUp },
+  { href: "/console/transaction", label: "Transactions", icon: Receipt },
   { href: "/console/connections", label: "Connections", icon: LinkIcon },
-  { href: "/console/settings", label: "Settings", icon: Settings },
 ];
 
 export function ConsoleSidebar() {
