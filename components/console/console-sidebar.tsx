@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Clock, Plus, Settings } from "lucide-react";
+import { Clock, Plus, Settings, Wallet, TrendingUp, Link as LinkIcon } from "lucide-react";
 
 const navItems = [
   { href: "/console/recents", label: "Recents", icon: Clock },
   { href: "/console/new", label: "New", icon: Plus },
+  { href: "/console/accounts", label: "Accounts", icon: Wallet },
+  { href: "/console/cashflow", label: "Cashflow", icon: TrendingUp },
+  { href: "/console/connections", label: "Connections", icon: LinkIcon },
   { href: "/console/settings", label: "Settings", icon: Settings },
 ];
 
