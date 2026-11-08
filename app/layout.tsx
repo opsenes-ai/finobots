@@ -8,8 +8,11 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Finobots",
+  title: "Finobots | AI Financial Operations",
   description: "AI financial operations agent for small businesses",
+  icons: {
+    icon: "/icons/app/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
