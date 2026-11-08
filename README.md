@@ -2,6 +2,8 @@
 
 Finobots is an open-source AI financial operations agent for small businesses. It helps users manage invoices, payments, expenses, reconciliation, and cash flow through chat, with interactive tables, charts, and approvals.
 
+**Live demo:** [https://finobots.vercel.app](https://finobots.vercel.app)
+
 ## Features
 
 - **AI-powered chat interface** — interact with your finances through natural language
@@ -108,6 +110,7 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## Links
 
+- [Live Demo](https://finobots.vercel.app)
 - [GitHub Repository](https://github.com/opsenes-ai/finobots)
 - [Report a Bug](https://github.com/opsenes-ai/finobots/issues/new)
 - [Request a Feature](https://github.com/opsenes-ai/finobots/issues/new)
