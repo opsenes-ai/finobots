@@ -1,16 +1,17 @@
 // Check permissions and approvals, then execute financial actions.
 //
-// POST {
-//   organization_id, connection_id,
-//   action: "send_invoice" | "send_reminder",
-//   invoice_id, subject?, note?,
-//   approved: true
-// }
+// POST { action_id, decision: "approve" | "reject", connection_id? }
 //
-// Owners and admins only. Nothing runs unless the request carries
-// approved: true, which the app should only send after the user confirms
-// the action. There's no stored approval record yet, so this flag is the
-// approval check.
+// action_id is a row in agent_actions with status "proposed" (or "approved"
+// but not yet run, to retry after an interruption). Owners and admins only.
+// The workspace comes from the stored action, never from the request.
+//
+//   reject   proposed -> rejected
+//   approve  proposed -> approved, then runs it -> executed | failed
+//
+// Each action runs at most once: it is claimed before PayPal is called, so
+// two approvals at the same time can't send the same invoice twice. A failed
+// action isn't retried; the agent proposes a new one.
 
 import { requireOrgMember, requireUser } from "../_shared/auth.ts";
 import { handleCors } from "../_shared/cors.ts";
@@ -19,18 +20,47 @@ import { createPayPalClient, type PayPalCredentials } from "../_shared/paypal.ts
 import { errorResponse, HttpError, json } from "../_shared/response.ts";
 import {
   optionalString,
+  optionalUuid,
   readJson,
   requireOneOf,
-  requireString,
   requireUuid,
 } from "../_shared/validation.ts";
 
-const ACTIONS = ["send_invoice", "send_reminder"] as const;
-const PATHS: Record<(typeof ACTIONS)[number], string> = {
+type ActionType = "send_invoice" | "send_reminder";
+
+type AgentAction = {
+  id: string;
+  organization_id: string;
+  connection_id: string | null;
+  type: ActionType;
+  payload: Record<string, unknown> | null;
+  status: "proposed" | "approved" | "rejected" | "executed" | "failed";
+  executed_at: string | null;
+};
+
+const PAYPAL_PATHS: Record<ActionType, string> = {
   send_invoice: "send",
   send_reminder: "remind",
 };
 const INVOICE_ID = /^[A-Za-z0-9-]{1,64}$/;
+
+function conflict(message: string): never {
+  throw new HttpError(409, message, "conflict");
+}
+
+// Payloads are written by members when an action is proposed, so they're
+// validated again here before anything runs.
+function readPayload(payload: Record<string, unknown> | null) {
+  const invoiceId = payload?.invoice_id;
+  if (typeof invoiceId !== "string" || !INVOICE_ID.test(invoiceId)) {
+    throw new HttpError(400, "This action doesn't have a valid invoice id.", "invalid_action");
+  }
+  return {
+    invoiceId,
+    subject: optionalString(payload?.subject, "subject", { max: 200 }),
+    note: optionalString(payload?.note, "note", { max: 4000 }),
+  };
+}
 
 Deno.serve(async (req) => {
   const preflight = handleCors(req);
@@ -40,46 +70,102 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") throw new HttpError(405, "Use POST.", "method_not_allowed");
 
     const body = await readJson(req);
-    const action = requireOneOf(body.action, "action", ACTIONS);
-    const organizationId = requireUuid(body.organization_id, "organization_id");
-    const connectionId = requireUuid(body.connection_id, "connection_id");
-    const invoiceId = requireString(body.invoice_id, "invoice_id", { max: 64 });
-    if (!INVOICE_ID.test(invoiceId)) {
-      throw new HttpError(400, "invoice_id isn't a valid PayPal invoice id.", "invalid_input");
-    }
-    const subject = optionalString(body.subject, "subject", { max: 200 });
-    const note = optionalString(body.note, "note", { max: 4000 });
-
-    if (body.approved !== true) {
-      throw new HttpError(400, "This action needs your approval before it runs.", "approval_required");
-    }
+    const actionId = requireUuid(body.action_id, "action_id");
+    const decision = requireOneOf(body.decision, "decision", ["approve", "reject"] as const);
+    const requestedConnectionId = optionalUuid(body.connection_id, "connection_id");
 
     const auth = await requireUser(req);
-    await requireOrgMember(auth, organizationId, ["owner", "admin"]);
 
-    const connection = await getConnection(auth.client, organizationId, connectionId);
+    // Row level security only returns actions from the user's own workspace.
+    const { data: action, error: loadError } = await auth.client
+      .from("agent_actions")
+      .select("id, organization_id, connection_id, type, payload, status, executed_at")
+      .eq("id", actionId)
+      .maybeSingle<AgentAction>();
+    if (loadError) throw loadError;
+    if (!action) throw new HttpError(404, "Action not found.", "not_found");
+
+    await requireOrgMember(auth, action.organization_id, ["owner", "admin"]);
+    const decidedAt = new Date().toISOString();
+
+    // Records the decision as the user. The update policy only allows moving
+    // a proposed action to approved or rejected.
+    const decide = async (status: "approved" | "rejected") => {
+      const { data, error } = await auth.client
+        .from("agent_actions")
+        .update({ status, decided_by: auth.userId, decided_at: decidedAt })
+        .eq("id", action.id)
+        .eq("status", "proposed")
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) conflict("This action was already decided.");
+    };
+
+    if (decision === "reject") {
+      if (action.status !== "proposed") conflict(`This action was already ${action.status}.`);
+      await decide("rejected");
+      return json(req, { action_id: action.id, status: "rejected" });
+    }
+
+    // Approve: check everything that can fail before recording the approval.
+    if (action.status === "approved" && action.executed_at) {
+      conflict("This action has already run.");
+    }
+    if (action.status !== "proposed" && action.status !== "approved") {
+      conflict(`This action was already ${action.status}.`);
+    }
+
+    const { invoiceId, subject, note } = readPayload(action.payload);
+
+    const connectionId = action.connection_id ?? requestedConnectionId;
+    if (!connectionId) {
+      throw new HttpError(400, "Choose the PayPal connection to use.", "connection_required");
+    }
+    const connection = await getConnection(auth.client, action.organization_id, connectionId);
     if (connection.provider !== "paypal" || connection.status !== "active") {
       throw new HttpError(400, "This connection isn't active.", "connection_inactive");
     }
 
-    const creds = await loadCredentials<PayPalCredentials>(createAdminClient(), connectionId);
+    const admin = createAdminClient();
+    const creds = await loadCredentials<PayPalCredentials>(admin, connectionId);
     if (!creds) throw new HttpError(400, "No credentials saved. Reconnect this account.", "no_credentials");
 
-    await createPayPalClient(creds).request(
-      `/v2/invoicing/invoices/${encodeURIComponent(invoiceId)}/${PATHS[action]}`,
-      { method: "POST", body: { subject, note, send_to_recipient: true } },
-    );
+    if (action.status === "proposed") await decide("approved");
 
-    // Audit trail in the function logs until an actions table exists.
-    console.log("Action executed", {
-      action,
-      organization_id: organizationId,
-      connection_id: connectionId,
-      invoice_id: invoiceId,
-      user_id: auth.userId,
-    });
+    // Claim the action. Only one request can set executed_at, so it runs once.
+    const { data: claimed, error: claimError } = await admin
+      .from("agent_actions")
+      .update({ executed_at: new Date().toISOString(), connection_id: connectionId })
+      .eq("id", action.id)
+      .eq("status", "approved")
+      .is("executed_at", null)
+      .select("id")
+      .maybeSingle();
+    if (claimError) throw claimError;
+    if (!claimed) conflict("This action is already running or has run.");
 
-    return json(req, { action, invoice_id: invoiceId, status: "sent" });
+    try {
+      await createPayPalClient(creds).request(
+        `/v2/invoicing/invoices/${encodeURIComponent(invoiceId)}/${PAYPAL_PATHS[action.type]}`,
+        { method: "POST", body: { subject, note, send_to_recipient: true } },
+      );
+    } catch (runError) {
+      const message = runError instanceof HttpError ? runError.message : "The action failed.";
+      await admin
+        .from("agent_actions")
+        .update({ status: "failed", result: { error: message } })
+        .eq("id", action.id);
+      throw runError;
+    }
+
+    const { error: doneError } = await admin
+      .from("agent_actions")
+      .update({ status: "executed", result: { sent: true, invoice_id: invoiceId } })
+      .eq("id", action.id);
+    if (doneError) throw doneError;
+
+    return json(req, { action_id: action.id, status: "executed" });
   } catch (error) {
     return errorResponse(req, error);
   }
