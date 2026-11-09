@@ -4,15 +4,17 @@
 //
 // Any member. Streams Server-Sent Events:
 //   { type: "text", delta }                    a piece of the reply
-//   { type: "action", action, requires_approval: true }
-//                                               a proposed action; nothing runs
-//                                               until the user approves it and
-//                                               the app calls the actions function
+//   { type: "action", action_id, action, requires_approval: true }
+//                                               a proposed action, saved to
+//                                               agent_actions. Nothing runs until
+//                                               the user approves it through the
+//                                               actions function with action_id.
 //   { type: "error", message }  then  { type: "done" }
 //
 // Uses any OpenAI-compatible chat completions API. Secrets:
 //   AI_API_KEY, AI_MODEL, AI_BASE_URL (default https://api.openai.com/v1)
 // The conversation comes from the request; messages aren't stored yet.
+// Proposed actions are stored, with chat_id when one is given.
 
 import { requireOrgMember, requireUser } from "../_shared/auth.ts";
 import { corsHeaders, handleCors } from "../_shared/cors.ts";
@@ -53,7 +55,27 @@ const TOOLS = [
   },
 ];
 
-const PROPOSABLE = new Set(["send_invoice", "send_reminder"]);
+type ProposableType = "send_invoice" | "send_reminder";
+const PROPOSABLE = new Set<string>(["send_invoice", "send_reminder"]);
+// Same rule the actions function applies, so saved proposals can be approved.
+const INVOICE_ID = /^[A-Za-z0-9-]{1,64}$/;
+
+// Returns a clean proposal, or null if the model's output isn't usable.
+// Lengths are capped to what agent_actions and the actions function accept.
+function readProposal(args: Record<string, unknown>) {
+  if (!PROPOSABLE.has(String(args.action))) return null;
+  if (typeof args.invoice_id !== "string" || !INVOICE_ID.test(args.invoice_id)) return null;
+
+  const text = (value: unknown, max: number) =>
+    typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
+
+  return {
+    type: args.action as ProposableType,
+    invoiceId: args.invoice_id,
+    note: text(args.note, 4000),
+    summary: text(args.summary, 500),
+  };
+}
 
 function env(name: string, fallback?: string): string {
   const value = Deno.env.get(name) ?? fallback;
@@ -182,17 +204,39 @@ Deno.serve(async (req) => {
             } catch {
               continue;
             }
-            // Only pass on well-formed proposals for supported actions.
-            if (!PROPOSABLE.has(String(args.action)) || typeof args.invoice_id !== "string") {
+            const proposal = readProposal(args);
+            if (!proposal) continue;
+
+            // Saved as the user, so row level security records it as their
+            // proposal in their workspace. Nothing runs until it's approved.
+            const { data: saved, error: saveError } = await auth.client
+              .from("agent_actions")
+              .insert({
+                organization_id: organizationId,
+                chat_id: chatId ?? null,
+                type: proposal.type,
+                payload: { invoice_id: proposal.invoiceId, note: proposal.note },
+                summary: proposal.summary,
+                status: "proposed",
+                proposed_by: auth.userId,
+              })
+              .select("id")
+              .single<{ id: string }>();
+
+            if (saveError) {
+              console.error("Saving proposed action failed", saveError);
+              send({ type: "error", message: "A proposed action couldn't be saved." });
               continue;
             }
+
             send({
               type: "action",
+              action_id: saved.id,
               action: {
-                action: args.action,
-                invoice_id: args.invoice_id,
-                note: typeof args.note === "string" ? args.note : undefined,
-                summary: typeof args.summary === "string" ? args.summary : undefined,
+                action: proposal.type,
+                invoice_id: proposal.invoiceId,
+                note: proposal.note,
+                summary: proposal.summary,
               },
               requires_approval: true,
             });
