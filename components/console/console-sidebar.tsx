@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/console/new", label: "New Chat", icon: Plus },
+  { href: "/console/chat", label: "New Chat", icon: Plus },
   { href: "/console/recents", label: "Recents", icon: Clock },
   { href: "/console/accounts", label: "Accounts", icon: Wallet },
   { href: "/console/cashflow", label: "Cashflow", icon: TrendingUp },
