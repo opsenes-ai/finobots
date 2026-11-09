@@ -11,8 +11,8 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
-import { FilePreview } from "@/components/ui/file-preview"
-import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { FilePreview } from "./file-preview"
+import { MarkdownRenderer } from "./markdown-renderer"
 
 const chatBubbleVariants = cva(
   "group/message relative break-words rounded-lg p-3 text-sm sm:max-w-[70%]",
@@ -77,7 +77,7 @@ interface ToolResult {
   toolName: string
   result: {
     __cancelled?: boolean
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
@@ -101,7 +101,7 @@ interface TextPart {
 // For compatibility with AI SDK types, not used
 interface SourcePart {
   type: "source"
-  source?: any
+  source?: unknown
 }
 
 interface FilePart {
@@ -275,10 +275,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   )
 }
 
+// Buffer is Node-only, so decode the base64 data URL with the browser's atob.
 function dataUrlToUint8Array(data: string) {
-  const base64 = data.split(",")[1]
-  const buf = Buffer.from(base64, "base64")
-  return new Uint8Array(buf)
+  const base64 = data.split(",")[1] ?? ""
+  const binary = atob(base64)
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0))
 }
 
 const ReasoningBlock = ({ part }: { part: ReasoningPart }) => {
@@ -292,14 +293,19 @@ const ReasoningBlock = ({ part }: { part: ReasoningPart }) => {
         className="group w-full overflow-hidden rounded-lg border bg-muted/50"
       >
         <div className="flex items-center p-2">
-          <CollapsibleTrigger asChild>
-            <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-              <ChevronRight className="h-4 w-4 transition-transform group-data-[state=open]:rotate-90" />
-              <span>Thinking</span>
-            </button>
+          {/* Base UI renders the trigger as a button, so no asChild wrapper. */}
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 transition-transform",
+                isOpen && "rotate-90"
+              )}
+            />
+            <span>Thinking</span>
           </CollapsibleTrigger>
         </div>
-        <CollapsibleContent forceMount>
+        {/* keepMounted is Base UI's equivalent of Radix forceMount. */}
+        <CollapsibleContent keepMounted>
           <motion.div
             initial={false}
             animate={isOpen ? "open" : "closed"}

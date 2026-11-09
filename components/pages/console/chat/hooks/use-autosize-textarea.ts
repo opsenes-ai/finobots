@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef } from "react"
 
 interface UseAutosizeTextAreaProps {
-  ref: React.RefObject<HTMLTextAreaElement>
+  // React 19 refs created with useRef(null) are typed as nullable.
+  ref: React.RefObject<HTMLTextAreaElement | null>
   maxHeight?: number
   borderWidth?: number
   dependencies: React.DependencyList

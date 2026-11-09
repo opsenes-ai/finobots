@@ -3,6 +3,7 @@
 import {
   forwardRef,
   useCallback,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactElement,
@@ -10,13 +11,13 @@ import {
 import { ArrowDown, ThumbsDown, ThumbsUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { useAutoScroll } from "@/components/hooks/use-auto-scroll"
 import { Button } from "@/components/ui/button"
-import { type Message } from "@/components/ui/chat-message"
-import { CopyButton } from "@/components/ui/copy-button"
-import { MessageInput } from "@/components/ui/message-input"
-import { MessageList } from "@/components/ui/message-list"
-import { PromptSuggestions } from "@/components/ui/prompt-suggestions"
+import { useAutoScroll } from "../hooks/use-auto-scroll"
+import { type Message } from "./chat-message"
+import { CopyButton } from "./copy-button"
+import { MessageInput } from "./message-input"
+import { MessageList } from "./message-list"
+import { PromptSuggestions } from "./prompt-suggestions"
 
 interface ChatPropsBase {
   handleSubmit: (
@@ -33,7 +34,7 @@ interface ChatPropsBase {
     messageId: string,
     rating: "thumbs-up" | "thumbs-down"
   ) => void
-  setMessages?: (messages: any[]) => void
+  setMessages?: (messages: Message[]) => void
   transcribeAudio?: (blob: Blob) => Promise<string>
 }
 
@@ -67,8 +68,11 @@ export function Chat({
   const isEmpty = messages.length === 0
   const isTyping = lastMessage?.role === "user"
 
+  // Keep the latest messages for handleStop without writing a ref during render.
   const messagesRef = useRef(messages)
-  messagesRef.current = messages
+  useLayoutEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
 
   // Enhanced stop function that marks pending tool calls as cancelled
   const handleStop = useCallback(() => {
@@ -113,7 +117,7 @@ export function Chat({
     }
 
     if (lastAssistantMessage.parts && lastAssistantMessage.parts.length > 0) {
-      const updatedParts = lastAssistantMessage.parts.map((part: any) => {
+      const updatedParts = lastAssistantMessage.parts.map((part) => {
         if (
           part.type === "tool-invocation" &&
           part.toolInvocation &&
@@ -124,7 +128,7 @@ export function Chat({
             ...part,
             toolInvocation: {
               ...part.toolInvocation,
-              state: "result",
+              state: "result" as const,
               result: {
                 content: "Tool execution was cancelled",
                 __cancelled: true,
@@ -305,7 +309,7 @@ interface ChatFormProps {
 }
 
 export const ChatForm = forwardRef<HTMLFormElement, ChatFormProps>(
-  ({ children, handleSubmit, isPending, className }, ref) => {
+  ({ children, handleSubmit, className }, ref) => {
     const [files, setFiles] = useState<File[] | null>(null)
 
     const onSubmit = (event: React.FormEvent) => {

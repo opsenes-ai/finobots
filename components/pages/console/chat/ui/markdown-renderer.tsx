@@ -1,9 +1,12 @@
-import React, { Suspense } from "react"
-import Markdown from "react-markdown"
+"use client"
+
+import React, { useEffect, useState } from "react"
+import Markdown, { type Components, type ExtraProps } from "react-markdown"
 import remarkGfm from "remark-gfm"
+import type { BundledLanguage, ThemedToken } from "shiki"
 
 import { cn } from "@/lib/utils"
-import { CopyButton } from "@/components/ui/copy-button"
+import { CopyButton } from "./copy-button"
 
 interface MarkdownRendererProps {
   children: string
@@ -19,73 +22,77 @@ export function MarkdownRenderer({ children }: MarkdownRendererProps) {
   )
 }
 
-interface HighlightedPre extends React.HTMLAttributes<HTMLPreElement> {
+interface HighlightedPreProps extends React.HTMLAttributes<HTMLPreElement> {
   children: string
   language: string
 }
 
-const HighlightedPre = React.memo(
-  async ({ children, language, ...props }: HighlightedPre) => {
-    const { codeToTokens, bundledLanguages } = await import("shiki")
+// Highlights code on the client after mount. Async components are not
+// supported in Client Components, so shiki is loaded inside an effect and
+// the plain code is shown until the tokens are ready.
+function HighlightedPre({ children, language, ...props }: HighlightedPreProps) {
+  const [highlighted, setHighlighted] = useState<{
+    code: string
+    language: string
+    tokens: ThemedToken[][]
+  } | null>(null)
 
-    if (!(language in bundledLanguages)) {
-      return <pre {...props}>{children}</pre>
-    }
+  useEffect(() => {
+    let cancelled = false
 
-    const { tokens } = await codeToTokens(children, {
-      lang: language as keyof typeof bundledLanguages,
-      defaultColor: false,
-      themes: {
-        light: "github-light",
-        dark: "github-dark",
-      },
+    import("shiki").then(async ({ codeToTokens, bundledLanguages }) => {
+      if (!(language in bundledLanguages)) return
+
+      const { tokens } = await codeToTokens(children, {
+        lang: language as BundledLanguage,
+        theme: "github-light",
+      })
+
+      if (!cancelled) setHighlighted({ code: children, language, tokens })
     })
 
-    return (
-      <pre {...props}>
-        <code>
-          {tokens.map((line, lineIndex) => (
-            <>
-              <span key={lineIndex}>
-                {line.map((token, tokenIndex) => {
-                  const style =
-                    typeof token.htmlStyle === "string"
-                      ? undefined
-                      : token.htmlStyle
+    return () => {
+      cancelled = true
+    }
+  }, [children, language])
 
-                  return (
-                    <span
-                      key={tokenIndex}
-                      className="text-shiki-light bg-shiki-light-bg dark:text-shiki-dark dark:bg-shiki-dark-bg"
-                      style={style}
-                    >
-                      {token.content}
-                    </span>
-                  )
-                })}
-              </span>
-              {lineIndex !== tokens.length - 1 && "\n"}
-            </>
-          ))}
-        </code>
-      </pre>
-    )
+  // Ignore tokens left over from a previous code or language value.
+  const tokens =
+    highlighted?.code === children && highlighted.language === language
+      ? highlighted.tokens
+      : null
+
+  if (!tokens) {
+    return <pre {...props}>{children}</pre>
   }
-)
-HighlightedPre.displayName = "HighlightedCode"
 
-interface CodeBlockProps extends React.HTMLAttributes<HTMLPreElement> {
+  return (
+    <pre {...props}>
+      <code>
+        {tokens.map((line, lineIndex) => (
+          <React.Fragment key={lineIndex}>
+            <span>
+              {line.map((token, tokenIndex) => (
+                <span key={tokenIndex} style={{ color: token.color }}>
+                  {token.content}
+                </span>
+              ))}
+            </span>
+            {lineIndex !== tokens.length - 1 && "\n"}
+          </React.Fragment>
+        ))}
+      </code>
+    </pre>
+  )
+}
+
+interface CodeBlockProps {
   children: React.ReactNode
   className?: string
   language: string
 }
 
-const CodeBlock = ({
-  children,
-  className,
-  language,
-  ...restProps
-}: CodeBlockProps) => {
+const CodeBlock = ({ children, className, language }: CodeBlockProps) => {
   const code =
     typeof children === "string"
       ? children
@@ -98,17 +105,9 @@ const CodeBlock = ({
 
   return (
     <div className="group/code relative mb-4">
-      <Suspense
-        fallback={
-          <pre className={preClass} {...restProps}>
-            {children}
-          </pre>
-        }
-      >
-        <HighlightedPre language={language} className={preClass}>
-          {code}
-        </HighlightedPre>
-      </Suspense>
+      <HighlightedPre language={language} className={preClass}>
+        {code}
+      </HighlightedPre>
 
       <div className="invisible absolute right-2 top-2 flex space-x-1 rounded-lg p-1 opacity-0 transition-all duration-200 group-hover/code:visible group-hover/code:opacity-100">
         <CopyButton content={code} copyMessage="Copied code to clipboard" />
@@ -117,27 +116,30 @@ const CodeBlock = ({
   )
 }
 
-function childrenTakeAllStringContents(element: any): string {
-  if (typeof element === "string") {
-    return element
+function childrenTakeAllStringContents(element: React.ReactNode): string {
+  if (typeof element === "string") return element
+  if (typeof element === "number") return String(element)
+  if (Array.isArray(element)) {
+    return element.map((child) => childrenTakeAllStringContents(child)).join("")
   }
-
-  if (element?.props?.children) {
-    let children = element.props.children
-
-    if (Array.isArray(children)) {
-      return children
-        .map((child) => childrenTakeAllStringContents(child))
-        .join("")
-    } else {
-      return childrenTakeAllStringContents(children)
-    }
+  if (React.isValidElement<{ children?: React.ReactNode }>(element)) {
+    return childrenTakeAllStringContents(element.props.children)
   }
-
   return ""
 }
 
-const COMPONENTS = {
+type WithClassProps = React.HTMLAttributes<HTMLElement> & ExtraProps
+
+function withClass(Tag: React.ElementType, classes: string) {
+  const Component = ({ node, className, ...props }: WithClassProps) => {
+    void node // react-markdown's AST node, not a DOM attribute
+    return <Tag className={cn(classes, className)} {...props} />
+  }
+  Component.displayName = typeof Tag === "string" ? Tag : "MarkdownElement"
+  return Component
+}
+
+const COMPONENTS: Components = {
   h1: withClass("h1", "text-2xl font-semibold"),
   h2: withClass("h2", "font-semibold text-xl"),
   h3: withClass("h3", "font-semibold text-lg"),
@@ -146,10 +148,11 @@ const COMPONENTS = {
   strong: withClass("strong", "font-semibold"),
   a: withClass("a", "text-primary underline underline-offset-2"),
   blockquote: withClass("blockquote", "border-l-2 border-primary pl-4"),
-  code: ({ children, className, node, ...rest }: any) => {
+  code: ({ children, className, node, ...rest }) => {
+    void node
     const match = /language-(\w+)/.exec(className || "")
     return match ? (
-      <CodeBlock className={className} language={match[1]} {...rest}>
+      <CodeBlock className={className} language={match[1]}>
         {children}
       </CodeBlock>
     ) : (
@@ -163,7 +166,7 @@ const COMPONENTS = {
       </code>
     )
   },
-  pre: ({ children }: any) => children,
+  pre: ({ children }) => <>{children}</>,
   ol: withClass("ol", "list-decimal space-y-2 pl-6"),
   ul: withClass("ul", "list-disc space-y-2 pl-6"),
   li: withClass("li", "my-1.5"),
@@ -182,14 +185,6 @@ const COMPONENTS = {
   tr: withClass("tr", "m-0 border-t p-0 even:bg-muted"),
   p: withClass("p", "whitespace-pre-wrap"),
   hr: withClass("hr", "border-foreground/20"),
-}
-
-function withClass(Tag: keyof JSX.IntrinsicElements, classes: string) {
-  const Component = ({ node, ...props }: any) => (
-    <Tag className={classes} {...props} />
-  )
-  Component.displayName = Tag
-  return Component
 }
 
 export default MarkdownRenderer

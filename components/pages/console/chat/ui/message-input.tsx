@@ -2,16 +2,16 @@
 
 import React, { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { ArrowUp, Info, Loader2, Mic, Paperclip, Square, X } from "lucide-react"
+import { ArrowUp, Info, Loader2, Mic, Paperclip, Square } from "lucide-react"
 import { omit } from "remeda"
 
 import { cn } from "@/lib/utils"
-import { useAudioRecording } from "@/components/hooks/use-audio-recording"
-import { useAutosizeTextArea } from "@/components/hooks/use-autosize-textarea"
-import { AudioVisualizer } from "@/components/ui/audio-visualizer"
 import { Button } from "@/components/ui/button"
-import { FilePreview } from "@/components/ui/file-preview"
-import { InterruptPrompt } from "@/components/ui/interrupt-prompt"
+import { useAudioRecording } from "../hooks/use-audio-recording"
+import { useAutosizeTextArea } from "../hooks/use-autosize-textarea"
+import { AudioVisualizer } from "./audio-visualizer"
+import { FilePreview } from "./file-preview"
+import { InterruptPrompt } from "./interrupt-prompt"
 
 interface MessageInputBaseProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -62,15 +62,15 @@ export function MessageInput({
   } = useAudioRecording({
     transcribeAudio,
     onTranscriptionComplete: (text) => {
-      props.onChange?.({ target: { value: text } } as any)
+      props.onChange?.({
+        target: { value: text },
+      } as React.ChangeEvent<HTMLTextAreaElement>)
     },
   })
 
-  useEffect(() => {
-    if (!isGenerating) {
-      setShowInterruptPrompt(false)
-    }
-  }, [isGenerating])
+  // The prompt only applies while a response is generating. Deriving it here
+  // replaces an effect that reset the state after every render.
+  const interruptPromptOpen = isGenerating && showInterruptPrompt
 
   const addFiles = (files: File[] | null) => {
     if (props.allowAttachments) {
@@ -118,10 +118,8 @@ export function MessageInput({
     if (text && text.length > 500 && props.allowAttachments) {
       event.preventDefault()
       const blob = new Blob([text], { type: "text/plain" })
-      const file = new File([blob], "Pasted text", {
-        type: "text/plain",
-        lastModified: Date.now(),
-      })
+      // lastModified defaults to the current time.
+      const file = new File([blob], "Pasted text", { type: "text/plain" })
       addFiles([file])
       return
     }
@@ -140,10 +138,9 @@ export function MessageInput({
       event.preventDefault()
 
       if (isGenerating && stop && enableInterrupt) {
-        if (showInterruptPrompt) {
+        if (interruptPromptOpen) {
+          // Stop the current response; the submit below sends the new message.
           stop()
-          setShowInterruptPrompt(false)
-          event.currentTarget.form?.requestSubmit()
         } else if (
           props.value ||
           (props.allowAttachments && props.files?.length)
@@ -153,6 +150,7 @@ export function MessageInput({
         }
       }
 
+      setShowInterruptPrompt(false)
       event.currentTarget.form?.requestSubmit()
     }
 
@@ -162,11 +160,18 @@ export function MessageInput({
   const textAreaRef = useRef<HTMLTextAreaElement>(null)
   const [textAreaHeight, setTextAreaHeight] = useState<number>(0)
 
+  // Track the textarea height so the recording overlay matches it. A
+  // ResizeObserver updates the state from a callback, not the effect body.
   useEffect(() => {
-    if (textAreaRef.current) {
-      setTextAreaHeight(textAreaRef.current.offsetHeight)
-    }
-  }, [props.value])
+    const textArea = textAreaRef.current
+    if (!textArea) return
+
+    const observer = new ResizeObserver(() => {
+      setTextAreaHeight(textArea.offsetHeight)
+    })
+    observer.observe(textArea)
+    return () => observer.disconnect()
+  }, [])
 
   const showFileList =
     props.allowAttachments && props.files && props.files.length > 0
@@ -187,7 +192,7 @@ export function MessageInput({
     >
       {enableInterrupt && (
         <InterruptPrompt
-          isOpen={showInterruptPrompt}
+          isOpen={interruptPromptOpen}
           close={() => setShowInterruptPrompt(false)}
         />
       )}
