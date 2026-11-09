@@ -57,8 +57,7 @@ Finobots helps users manage invoices, payments, expenses, reconciliation, and ca
 - /console/transaction — Transactions
 - /console/transaction/[recordId] — Transaction detail
 - /console/connections — Connections
-- /console/connectors — Connector catalogue
-- /console/connectors/[connectionId] — Connector detail
+- /console/connections/[connectionId] — Connection detail
 - /console/recents — Recent chats
 - /console/settings — Settings
 
