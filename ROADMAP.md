@@ -15,7 +15,7 @@ This document outlines the planned direction and milestones for Finobots.
 - [x] Next.js 16 project scaffold with App Router
 - [x] Tailwind CSS v4 and shadcn/ui setup
 - [x] App and console layout components
-- [x] Authentication pages (login, signup, verify, forgot, reset)
+- [x] Authentication pages (login, signup, forgot, reset)
 - [x] Legal pages (terms, privacy, cookies)
 - [x] Project documentation and open-source files
 

@@ -22,6 +22,7 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -34,10 +35,13 @@ export default function SignupPage() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: {
+        data: { full_name: name },
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
     });
 
     if (error) {
@@ -46,7 +50,14 @@ export default function SignupPage() {
       return;
     }
 
-    router.push("/auth/verify");
+    // With email confirmation off, signUp returns a session straight away.
+    if (data.session) {
+      router.push("/console/chat");
+      return;
+    }
+
+    setSent(true);
+    setLoading(false);
   }
 
   return (
@@ -85,7 +96,12 @@ export default function SignupPage() {
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" className="w-full" disabled={loading}>
+          {sent && (
+            <p className="text-sm text-muted-foreground">
+              Check your email to confirm your account, then log in.
+            </p>
+          )}
+          <Button type="submit" className="w-full" disabled={loading || sent}>
             {loading ? "Creating account…" : "Sign up"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">

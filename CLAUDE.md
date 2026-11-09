@@ -49,7 +49,7 @@ This version of Next.js has breaking changes from earlier versions. Before writi
 
 ```
 app/            # App Router pages and layouts
-  auth/         # Authentication (login, signup, verify, forgot, reset)
+  auth/         # Authentication (login, signup, forgot, reset)
   legal/        # Legal pages (terms, cookies, privacy)
 components/
   app/          # Public layout (header, footer)

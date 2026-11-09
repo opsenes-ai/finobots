@@ -35,7 +35,7 @@ Finobots is an open-source AI financial operations agent for small businesses. I
 ## Routes
 
 - `/` — redirects to `/auth/login`
-- `/auth/*` — login, signup, verify, forgot, reset (auth layout with AppLayout)
+- `/auth/*` — login, signup, forgot, reset (auth layout with AppLayout)
 - `/legal/*` — terms, privacy, cookies (legal layout with AppLayout + prose styling)
 
 ## Key Conventions

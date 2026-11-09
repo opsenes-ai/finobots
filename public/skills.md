@@ -35,7 +35,7 @@ Finobots is an open-source AI financial operations agent for small businesses. I
 
 ```
 app/
-  auth/           # login, signup, verify, forgot, reset
+  auth/           # login, signup, forgot, reset
   console/        # dashboard routes
   legal/          # terms, privacy, cookies
   globals.css     # theme tokens

@@ -42,7 +42,6 @@ Finobots helps users manage invoices, payments, expenses, reconciliation, and ca
 - / — Home (landing page)
 - /auth/login — Login
 - /auth/signup — Sign up
-- /auth/verify — Email verification
 - /auth/forgot — Forgot password
 - /auth/reset — Reset password
 - /legal/terms — Terms of Service
