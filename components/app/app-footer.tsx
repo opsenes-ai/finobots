@@ -9,7 +9,7 @@ const legalLinks = [
 export function AppFooter() {
   return (
     <footer className="border-t">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex flex-col items-center gap-3 px-4 py-4 sm:h-16 sm:flex-row sm:justify-between sm:gap-0 sm:px-6 sm:py-0">
         <span className="text-sm text-muted-foreground">&copy; 2026 Finobots</span>
         <nav className="flex items-center gap-4">
           {legalLinks.map((link) => (

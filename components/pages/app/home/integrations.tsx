@@ -18,17 +18,17 @@ const integrations = [
 
 export function Integrations() {
   return (
-    <section id="integrations" className="mx-auto w-full max-w-5xl px-6 py-24">
-      <div className="mb-12 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight">Integrations</h2>
-        <p className="mt-3 text-muted-foreground">
+    <section id="integrations" className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+      <div className="mb-10 text-center sm:mb-12">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Integrations</h2>
+        <p className="mt-3 text-sm text-muted-foreground sm:text-base">
           Connect the tools your business already uses.
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {integrations.map((integration) => (
           <Card key={integration.name}>
-            <CardContent className="flex items-start gap-4 p-5">
+            <CardContent className="flex items-start gap-4 p-4 sm:p-5">
               <Image
                 src={integration.icon}
                 alt={integration.name}

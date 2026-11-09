@@ -7,8 +7,8 @@ export default function LegalLayout({
 }) {
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-3xl px-6 py-16">
-        <div className="prose dark:prose-invert">{children}</div>
+      <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="prose">{children}</div>
       </div>
     </AppLayout>
   );

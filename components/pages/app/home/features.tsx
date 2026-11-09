@@ -49,12 +49,12 @@ const features = [
 
 export function Features() {
   return (
-    <section id="features" className="mx-auto w-full max-w-5xl px-6 py-24">
-      <div className="mb-12 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight">
+    <section id="features" className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 sm:py-24">
+      <div className="mb-10 text-center sm:mb-12">
+        <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
           Everything you need to run your finances
         </h2>
-        <p className="mt-3 text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground sm:text-base">
           One agent. All the financial operations your business needs.
         </p>
       </div>
