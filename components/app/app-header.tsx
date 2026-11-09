@@ -1,10 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-export function AppHeader() {
+export function AppHeader({ className }: { className?: string }) {
   return (
-    <header className="border-b">
+    <header className={cn("border-b bg-background", className)}>
       <div className="flex h-16 items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/icons/app/dark.png" alt="Finobots" width={28} height={28} />
