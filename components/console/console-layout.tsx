@@ -10,7 +10,8 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-svh">
-      <Suspense fallback={<aside className="w-64 border-r" />}>
+      {/* Matches the collapsed sidebar width, so the layout doesn't shift. */}
+      <Suspense fallback={<aside className="w-16 border-r" />}>
         <ConsoleSidebar profilePromise={profilePromise} />
       </Suspense>
       <div className="flex flex-1 flex-col">

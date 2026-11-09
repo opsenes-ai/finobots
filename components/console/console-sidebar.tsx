@@ -32,7 +32,8 @@ export function ConsoleSidebar({
   profilePromise: Promise<Profile | null>;
 }) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  // Collapsed by default, and collapsed again whenever a page is opened.
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <aside
@@ -57,6 +58,7 @@ export function ConsoleSidebar({
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setCollapsed(true)}
               title={collapsed ? item.label : undefined}
               className={`flex items-center rounded-lg text-sm font-medium transition-colors ${
                 collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2"
