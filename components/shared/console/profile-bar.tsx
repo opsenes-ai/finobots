@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use } from "react";
+import { Suspense, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/auth/profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { LogOut, Settings } from "lucide-react";
+import { KeyRound, LogOut, User } from "lucide-react";
 
 const FALLBACK_NAME = "Profile";
 
@@ -82,9 +82,12 @@ export function ProfileBar({
   profilePromise: Promise<Profile | null>;
 }) {
   const router = useRouter();
+  // Controlled so picking an item closes the popup. Clicking outside or
+  // clicking the profile row again also closes it.
+  const [open, setOpen] = useState(false);
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label="Profile menu"
         className={`flex h-16 w-full items-center border-t text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 ${
@@ -103,15 +106,32 @@ export function ProfileBar({
       <PopoverContent side="top" align="start" sideOffset={8} className="w-48 p-1.5">
         <button
           type="button"
-          onClick={() => router.push("/console/settings")}
+          onClick={() => {
+            setOpen(false);
+            router.push("/console/settings/profile");
+          }}
           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-muted"
         >
-          <Settings className="size-4" />
-          Settings
+          <User className="size-4" />
+          Profile
         </button>
         <button
           type="button"
-          onClick={() => router.push("/auth/login")}
+          onClick={() => {
+            setOpen(false);
+            router.push("/console/settings/api");
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-muted"
+        >
+          <KeyRound className="size-4" />
+          API
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            router.push("/auth/login");
+          }}
           className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive outline-none transition-colors hover:bg-destructive/10"
         >
           <LogOut className="size-4" />

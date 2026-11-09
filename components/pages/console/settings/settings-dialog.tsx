@@ -18,6 +18,8 @@ export function SettingsDialog({ children }: { children: React.ReactNode }) {
   return (
     <Dialog
       open
+      // Clicking or tapping outside, Escape, or the X closes the dialog.
+      disablePointerDismissal={false}
       onOpenChange={(open) => {
         if (!open) router.push("/console/chat");
       }}
