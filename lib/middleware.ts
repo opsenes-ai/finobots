@@ -38,10 +38,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims()
   const user = data?.claims
 
-  // Only the console requires a session. The home page, auth pages, legal
-  // pages, sitemap, robots and other public files stay open to everyone.
-  if (!user && request.nextUrl.pathname.startsWith('/console')) {
-    // no user, redirect to the login page
+  // proxy.ts only runs this for /console routes, so any request without a
+  // session here is redirected to login.
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
