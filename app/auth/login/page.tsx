@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/client";
+import { startSession } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +25,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
+  const [remember, setRemember] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,6 +54,8 @@ export default function LoginPage() {
       return;
     }
 
+    // 1 day normally, 30 days when "Remember me" is ticked.
+    await startSession(remember);
     router.push("/console/chat");
   }
 
@@ -94,7 +98,11 @@ export default function LoginPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Checkbox id="remember" />
+            <Checkbox
+              id="remember"
+              checked={remember}
+              onCheckedChange={(checked) => setRemember(checked)}
+            />
             <Label htmlFor="remember" className="text-sm font-normal">Remember me</Label>
           </div>
           {error && (

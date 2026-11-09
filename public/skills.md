@@ -17,7 +17,7 @@ Finobots is an open-source AI financial operations agent for small businesses. I
 - shadcn/ui (base-nova style) — components in `components/ui/`
 - Base UI primitives (not Radix)
 - Lucide React icons
-- Supabase (auth + database) — clients in `lib/client.ts`, `lib/server.ts`, `lib/middleware.ts`
+- Supabase (auth + database) — clients in `lib/client.ts`, `lib/server.ts`; auth code in `lib/auth/`
 
 ## Key Conventions
 
@@ -55,7 +55,10 @@ components/
 lib/
   client.ts       # Supabase browser client
   server.ts       # Supabase server client
-  middleware.ts   # Supabase session middleware
+  auth/
+    actions.ts    # server actions (startSession)
+    middleware.ts # Supabase session refresh + session policy
+    session.ts    # session rules: 1 day, 30 days remember me, 1 day idle
   utils.ts        # cn() utility
 
 public/
@@ -83,4 +86,4 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
 - **Browser**: `import { createClient } from "@/lib/client"`
 - **Server**: `import { createClient } from "@/lib/server"` (async, use in Server Components and Route Handlers)
-- **Middleware**: `import { updateSession } from "@/lib/middleware"` (use in `middleware.ts`)
+- **Proxy**: `import { updateSession } from "@/lib/auth/middleware"` (used in `proxy.ts`, console routes only)

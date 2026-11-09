@@ -1,5 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  ACTIVITY_COOKIE,
+  IDLE_TIMEOUT_MS,
+  SESSION_COOKIE,
+  cookieOptions,
+  isSessionValid,
+} from '@/lib/auth/session'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -45,6 +52,37 @@ export async function updateSession(request: NextRequest) {
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
+
+  // Session policy (see lib/auth/session.ts): 1 day normally, 30 days with
+  // "remember me", and logged out after 1 day without activity.
+  if (
+    !isSessionValid(
+      request.cookies.get(SESSION_COOKIE)?.value,
+      request.cookies.get(ACTIVITY_COOKIE)?.value
+    )
+  ) {
+    // scope "local" ends only this session, not the user's other devices.
+    await supabase.auth.signOut({ scope: 'local' })
+
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.search = ''
+    const expired = NextResponse.redirect(url)
+    // Carry over the auth cookies that signOut() just cleared.
+    supabaseResponse.cookies
+      .getAll()
+      .forEach((cookie) => expired.cookies.set(cookie))
+    expired.cookies.delete(SESSION_COOKIE)
+    expired.cookies.delete(ACTIVITY_COOKIE)
+    return expired
+  }
+
+  // Every console request extends the inactivity window.
+  supabaseResponse.cookies.set(
+    ACTIVITY_COOKIE,
+    String(Date.now()),
+    cookieOptions(IDLE_TIMEOUT_MS)
+  )
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
