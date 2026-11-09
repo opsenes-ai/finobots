@@ -9,13 +9,15 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const profilePromise = getProfile();
 
   return (
-    <div className="flex min-h-svh">
+    // Locked to the screen height: the sidebar stays fixed and only the page
+    // content scrolls, using the light scrollbar from globals.css.
+    <div className="flex h-svh overflow-hidden">
       {/* Matches the collapsed sidebar width, so the layout doesn't shift. */}
-      <Suspense fallback={<aside className="w-16 border-r" />}>
+      <Suspense fallback={<aside className="w-16 shrink-0 border-r" />}>
         <ConsoleSidebar profilePromise={profilePromise} />
       </Suspense>
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1 p-6">{children}</main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
   );
