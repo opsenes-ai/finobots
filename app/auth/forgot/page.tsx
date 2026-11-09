@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +19,9 @@ import { Label } from "@/components/ui/label";
 export default function ForgotPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     const form = e.currentTarget;
@@ -33,11 +32,14 @@ export default function ForgotPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
     if (error) {
-      setError(error.message);
+      toast.error(error.message);
       setLoading(false);
       return;
     }
 
+    toast.success("Reset link sent", {
+      description: "Check your email inbox.",
+    });
     setSent(true);
     setLoading(false);
   }
@@ -61,7 +63,6 @@ export default function ForgotPage() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" placeholder="you@example.com" required />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Sending…" : "Send reset link"}
             </Button>

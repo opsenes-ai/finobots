@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,18 +23,16 @@ export default function ResetPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
 
     const form = e.currentTarget;
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
     const confirm = (form.elements.namedItem("confirm-password") as HTMLInputElement).value;
 
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      toast.error("Passwords do not match.");
       return;
     }
 
@@ -42,11 +41,12 @@ export default function ResetPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setError(error.message);
+      toast.error(error.message);
       setLoading(false);
       return;
     }
 
+    toast.success("Password updated");
     router.push("/console/chat");
   }
 
@@ -96,7 +96,6 @@ export default function ResetPage() {
               </button>
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Resetting…" : "Reset password"}
           </Button>

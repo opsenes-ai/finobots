@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,12 +20,10 @@ import { Label } from "@/components/ui/label";
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     const form = e.currentTarget;
@@ -43,12 +42,16 @@ export default function SignupPage() {
     });
 
     if (error) {
-      setError(error.message);
+      toast.error(error.message);
       setLoading(false);
       return;
     }
 
     // Every new user must verify their email before they can log in.
+    toast.success("Check your email", {
+      description: "Confirm your account from the link we sent, then log in.",
+      duration: 8000,
+    });
     setSent(true);
     setLoading(false);
   }
@@ -88,12 +91,6 @@ export default function SignupPage() {
               </button>
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          {sent && (
-            <p className="text-sm text-muted-foreground">
-              Check your email to confirm your account, then log in.
-            </p>
-          )}
           <Button type="submit" className="w-full" disabled={loading || sent}>
             {loading ? "Creating account…" : "Sign up"}
           </Button>

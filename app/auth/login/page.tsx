@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/client";
 import { startSession } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
@@ -23,13 +24,10 @@ export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [invalid, setInvalid] = useState(false);
   const [remember, setRemember] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     const form = e.currentTarget;
@@ -41,15 +39,19 @@ export default function LoginPage() {
 
     if (error) {
       if (error.code === "email_not_confirmed") {
-        setError(
-          "Please verify your email first. Check your inbox for the confirmation link."
-        );
+        toast.error("Please verify your email first.", {
+          description: "Check your inbox for the confirmation link.",
+        });
       } else if (error.code === "invalid_credentials") {
-        setError("Invalid email or password.");
+        toast.error("Invalid email or password.", {
+          action: {
+            label: "Create account",
+            onClick: () => router.push("/auth/signup"),
+          },
+        });
       } else {
-        setError(error.message);
+        toast.error(error.message);
       }
-      setInvalid(error.code === "invalid_credentials");
       setLoading(false);
       return;
     }
@@ -105,19 +107,6 @@ export default function LoginPage() {
             />
             <Label htmlFor="remember" className="text-sm font-normal">Remember me</Label>
           </div>
-          {error && (
-            <p className="text-sm text-destructive">
-              {error}
-              {invalid && (
-                <>
-                  {" "}
-                  <Link href="/auth/signup" className="font-medium underline">
-                    New here? Create an account
-                  </Link>
-                </>
-              )}
-            </p>
-          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
