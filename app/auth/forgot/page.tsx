@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +16,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function ForgotPage() {
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const form = e.currentTarget;
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
+    const redirectTo = `${window.location.origin}/auth/callback?next=/auth/reset`;
+
+    const supabase = createClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setSent(true);
+    setLoading(false);
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -23,30 +51,27 @@ export default function ForgotPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full">
-            Send reset link
-          </Button>
-        </form>
+        {sent ? (
+          <p className="text-sm text-muted-foreground">
+            Reset link sent. Check your email inbox.
+          </p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Sending…" : "Send reset link"}
+            </Button>
+          </form>
+        )}
       </CardContent>
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           Remember your password?{" "}
-          <Link
-            href="/auth/login"
-            className="font-medium text-foreground hover:underline"
-          >
-            Login
-          </Link>
+          <Link href="/auth/login" className="font-medium text-foreground hover:underline">Login</Link>
         </p>
       </CardFooter>
     </Card>

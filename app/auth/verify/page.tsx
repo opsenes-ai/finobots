@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,7 +21,41 @@ import {
 import { Label } from "@/components/ui/label";
 
 export default function VerifyPage() {
+  const router = useRouter();
   const [value, setValue] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const supabase = createClient();
+    const email = new URLSearchParams(window.location.search).get("email") ?? "";
+
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: value,
+      type: "email",
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/console/chat");
+  }
+
+  async function handleResend() {
+    const supabase = createClient();
+    const email = new URLSearchParams(window.location.search).get("email") ?? "";
+    await supabase.auth.resend({ type: "signup", email });
+    setResent(true);
+  }
 
   return (
     <Card>
@@ -30,7 +66,7 @@ export default function VerifyPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="code">Verification code</Label>
             <InputOTP
@@ -52,8 +88,9 @@ export default function VerifyPage() {
               </InputOTPGroup>
             </InputOTP>
           </div>
-          <Button type="submit" className="w-full" disabled={value.length < 6}>
-            Verify
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={value.length < 6 || loading}>
+            {loading ? "Verifying…" : "Verify"}
           </Button>
         </form>
       </CardContent>
@@ -62,9 +99,11 @@ export default function VerifyPage() {
           Didn&apos;t receive a code?{" "}
           <button
             type="button"
-            className="font-medium text-foreground hover:underline"
+            onClick={handleResend}
+            disabled={resent}
+            className="font-medium text-foreground hover:underline disabled:opacity-50"
           >
-            Resend
+            {resent ? "Sent!" : "Resend"}
           </button>
         </p>
       </CardFooter>

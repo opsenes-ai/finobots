@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
+import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,8 +18,37 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function ResetPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+
+    const form = e.currentTarget;
+    const password = (form.elements.namedItem("password") as HTMLInputElement).value;
+    const confirm = (form.elements.namedItem("confirm-password") as HTMLInputElement).value;
+
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push("/console/chat");
+  }
 
   return (
     <Card>
@@ -26,12 +57,13 @@ export default function ResetPage() {
         <CardDescription>Enter your new password below</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="password">New password</Label>
             <div className="relative">
               <Input
                 id="password"
+                name="password"
                 type={showPassword ? "text" : "password"}
                 required
                 className="pr-9"
@@ -41,11 +73,7 @@ export default function ResetPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showPassword ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
@@ -54,6 +82,7 @@ export default function ResetPage() {
             <div className="relative">
               <Input
                 id="confirm-password"
+                name="confirm-password"
                 type={showConfirm ? "text" : "password"}
                 required
                 className="pr-9"
@@ -63,24 +92,18 @@ export default function ResetPage() {
                 onClick={() => setShowConfirm(!showConfirm)}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showConfirm ? (
-                  <EyeOff className="size-4" />
-                ) : (
-                  <Eye className="size-4" />
-                )}
+                {showConfirm ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
-          <Button type="submit" className="w-full">
-            Reset password
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Resetting…" : "Reset password"}
           </Button>
         </form>
       </CardContent>
       <CardFooter className="justify-center">
-        <Link
-          href="/auth/login"
-          className="text-sm font-medium text-foreground hover:underline"
-        >
+        <Link href="/auth/login" className="text-sm font-medium text-foreground hover:underline">
           Back to login
         </Link>
       </CardFooter>
