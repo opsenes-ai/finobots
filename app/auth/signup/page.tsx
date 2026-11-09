@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +22,22 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [paypalLoading, setPaypalLoading] = useState(false);
+
+  // Creates the account on first PayPal sign-in. Redirects to PayPal, then
+  // back through /auth/callback. Uses the "custom:paypal" Supabase provider.
+  async function handlePayPal() {
+    setPaypalLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "custom:paypal",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      toast.error("PayPal sign-up isn't available right now.");
+      setPaypalLoading(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -101,6 +118,27 @@ export default function SignupPage() {
             <Link href="/legal/privacy" className="font-medium text-foreground hover:underline">Privacy Policy</Link>.
           </p>
         </form>
+        <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          or
+          <span className="h-px flex-1 bg-border" />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={handlePayPal}
+          disabled={paypalLoading}
+        >
+          <Image
+            src="/connections/paypal.png"
+            alt=""
+            width={16}
+            height={16}
+            style={{ width: 16, height: "auto" }}
+          />
+          {paypalLoading ? "Redirecting…" : "Continue with PayPal"}
+        </Button>
       </CardContent>
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
