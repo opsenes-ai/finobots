@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/client";
@@ -18,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +33,12 @@ export default function SignupPage() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     const supabase = createClient();
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { full_name: name },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/login`,
       },
     });
 
@@ -50,12 +48,7 @@ export default function SignupPage() {
       return;
     }
 
-    // With email confirmation off, signUp returns a session straight away.
-    if (data.session) {
-      router.push("/console/chat");
-      return;
-    }
-
+    // Every new user must verify their email before they can log in.
     setSent(true);
     setLoading(false);
   }

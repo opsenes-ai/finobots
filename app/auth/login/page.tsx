@@ -23,6 +23,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,7 +38,16 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError(error.message);
+      if (error.code === "email_not_confirmed") {
+        setError(
+          "Please verify your email first. Check your inbox for the confirmation link."
+        );
+      } else if (error.code === "invalid_credentials") {
+        setError("Invalid email or password.");
+      } else {
+        setError(error.message);
+      }
+      setInvalid(error.code === "invalid_credentials");
       setLoading(false);
       return;
     }
@@ -87,7 +97,19 @@ export default function LoginPage() {
             <Checkbox id="remember" />
             <Label htmlFor="remember" className="text-sm font-normal">Remember me</Label>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && (
+            <p className="text-sm text-destructive">
+              {error}
+              {invalid && (
+                <>
+                  {" "}
+                  <Link href="/auth/signup" className="font-medium underline">
+                    New here? Create an account
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
