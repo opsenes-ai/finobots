@@ -1,0 +1,67 @@
+# Finobots
+
+> An open-source AI financial operations agent for small businesses.
+
+Finobots helps users manage invoices, payments, expenses, reconciliation, and cash flow through chat, with interactive tables, charts, and approvals.
+
+## Product
+
+- Live: https://finobots.vercel.app
+- GitHub: https://github.com/opsenes-ai/finobots
+- Issues: https://github.com/opsenes-ai/finobots/issues/new
+- Discussions: https://github.com/opsenes-ai/finobots/discussions
+
+## Features
+
+- AI-powered chat interface for financial operations
+- Invoice creation, tracking, and follow-up
+- Payment monitoring with status updates
+- Expense management and categorisation
+- Cash flow insights and forecasting
+- Account reconciliation
+- Financial reporting and summaries
+- Approval workflows for AI-proposed actions
+
+## Integrations
+
+- PayPal (available, sandbox support)
+- Venmo (coming soon)
+
+## Tech Stack
+
+- Framework: Next.js 16 (App Router)
+- Language: TypeScript
+- UI: React 19, Tailwind CSS v4, shadcn/ui (base-nova)
+- Icons: Lucide React
+- Primitives: Base UI
+- Backend: Supabase
+- Deployment: Vercel
+
+## Routes
+
+- / — Home (landing page)
+- /auth/login — Login
+- /auth/signup — Sign up
+- /auth/verify — Email verification
+- /auth/forgot — Forgot password
+- /auth/reset — Reset password
+- /legal/terms — Terms of Service
+- /legal/privacy — Privacy Policy
+- /legal/cookies — Cookie Policy
+- /console — Dashboard (redirects to /console/chat)
+- /console/chat — New chat
+- /console/chat/[chatId] — Chat session
+- /console/accounts — Accounts overview
+- /console/accounts/[accountId] — Account detail
+- /console/cashflow — Cash flow
+- /console/transaction — Transactions
+- /console/transaction/[recordId] — Transaction detail
+- /console/connections — Connections
+- /console/connectors — Connector catalogue
+- /console/connectors/[connectionId] — Connector detail
+- /console/recents — Recent chats
+- /console/settings — Settings
+
+## License
+
+MIT — https://github.com/opsenes-ai/finobots/blob/main/LICENSE
