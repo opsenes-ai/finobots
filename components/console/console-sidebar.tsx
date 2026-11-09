@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import type { Profile } from "@/lib/auth/profile";
 import { ProfileBar } from "@/components/shared/console";
 
 const navItems = [
@@ -25,7 +26,11 @@ const navItems = [
   { href: "/console/connections", label: "Connections", icon: LinkIcon },
 ];
 
-export function ConsoleSidebar() {
+export function ConsoleSidebar({
+  profilePromise,
+}: {
+  profilePromise: Promise<Profile | null>;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -70,7 +75,7 @@ export function ConsoleSidebar() {
         })}
       </nav>
       <div className="mt-auto">
-        <ProfileBar collapsed={collapsed} />
+        <ProfileBar collapsed={collapsed} profilePromise={profilePromise} />
       </div>
       <button
         type="button"
@@ -84,7 +89,7 @@ export function ConsoleSidebar() {
         ) : (
           <>
             <PanelLeftClose className="size-4 shrink-0" />
-            Collapse menu
+            collapse menu
           </>
         )}
       </button>

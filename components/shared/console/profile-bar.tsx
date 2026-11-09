@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, use } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/client";
+import type { Profile } from "@/lib/auth/profile";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverContent,
@@ -11,78 +12,92 @@ import {
 } from "@/components/ui/popover";
 import { LogOut, Settings } from "lucide-react";
 
-type Profile = {
-  full_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-};
+const FALLBACK_NAME = "Profile";
 
-// Loads the signed-in user's own profile row. Row level security limits the
-// query to that row, and it re-runs when the session changes.
-function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+// Two-letter initials: first letter of the first two words ("Jane Doe" -> "JD"),
+// or the first two letters of a single word ("test" -> "TE").
+function getInitials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters =
+    words.length >= 2
+      ? Array.from(words[0])[0] + Array.from(words[1])[0]
+      : Array.from(words[0] ?? "").slice(0, 2).join("");
+  return letters.toUpperCase();
+}
 
-  useEffect(() => {
-    const supabase = createClient();
-    let active = true;
+function Identity({
+  name,
+  avatarUrl,
+  collapsed,
+}: {
+  name: string;
+  avatarUrl?: string | null;
+  collapsed: boolean;
+}) {
+  return (
+    <>
+      <Avatar size="sm">
+        {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
+        <AvatarFallback>{getInitials(name)}</AvatarFallback>
+      </Avatar>
+      {!collapsed && <span className="truncate">{name}</span>}
+    </>
+  );
+}
 
-    const load = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        if (active) setProfile(null);
-        return;
-      }
+// Shown while the profile loads: an avatar circle and a name bar.
+function IdentitySkeleton({ collapsed }: { collapsed: boolean }) {
+  return (
+    <>
+      <Skeleton aria-hidden className="size-6 shrink-0 rounded-full" />
+      {!collapsed && <Skeleton aria-hidden className="h-3 w-24" />}
+    </>
+  );
+}
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, username, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle<Profile>();
+// Waits for the profile loaded on the server (lib/auth/profile.ts).
+function ProfileIdentity({
+  profilePromise,
+  collapsed,
+}: {
+  profilePromise: Promise<Profile | null>;
+  collapsed: boolean;
+}) {
+  const profile = use(profilePromise);
+  // Full name first, then username, then a generic label.
+  const name =
+    profile?.full_name?.trim() || profile?.username?.trim() || FALLBACK_NAME;
 
-      if (active) setProfile(data);
-    };
-
-    load();
-    const { data: subscription } = supabase.auth.onAuthStateChange(() => {
-      load();
-    });
-
-    return () => {
-      active = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, []);
-
-  return profile;
+  return (
+    <Identity name={name} avatarUrl={profile?.avatar_url} collapsed={collapsed} />
+  );
 }
 
 // Full-width sidebar row, the same 4rem height as the Collapse row below it.
-export function ProfileBar({ collapsed = false }: { collapsed?: boolean }) {
+export function ProfileBar({
+  collapsed = false,
+  profilePromise,
+}: {
+  collapsed?: boolean;
+  profilePromise: Promise<Profile | null>;
+}) {
   const router = useRouter();
-  const profile = useProfile();
-
-  // Full name first, then username, then a generic label while loading.
-  const name =
-    profile?.full_name?.trim() || profile?.username?.trim() || "Profile";
-  const initial = name.charAt(0).toUpperCase();
 
   return (
     <Popover>
       <PopoverTrigger
-        aria-label={`Profile: ${name}`}
+        aria-label="Profile menu"
         className={`flex h-16 w-full items-center border-t text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-ring/50 ${
           collapsed ? "justify-center" : "justify-start gap-3 px-6"
         }`}
       >
-        <Avatar size="sm">
-          {profile?.avatar_url ? (
-            <AvatarImage src={profile.avatar_url} alt="" />
-          ) : null}
-          <AvatarFallback>{initial}</AvatarFallback>
-        </Avatar>
-        {!collapsed && <span className="truncate">{name}</span>}
+        {/* A neutral placeholder while the name loads, so no wrong name shows. */}
+        <Suspense fallback={<IdentitySkeleton collapsed={collapsed} />}>
+          <ProfileIdentity
+            profilePromise={profilePromise}
+            collapsed={collapsed}
+          />
+        </Suspense>
       </PopoverTrigger>
       {/* Opens upward, since the trigger sits at the bottom of the sidebar. */}
       <PopoverContent side="top" align="start" sideOffset={8} className="w-48 p-1.5">
