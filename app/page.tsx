@@ -1,7 +1,22 @@
-import { redirect } from "next/navigation";
-
-export const instant = false;
+import { AppLayout } from "@/components/app";
+import {
+  Hero,
+  Features,
+  Workflow,
+  Integrations,
+  FAQ,
+  CTA,
+} from "@/components/pages/app/home";
 
 export default function Home() {
-  redirect("/auth/login");
+  return (
+    <AppLayout>
+      <Hero />
+      <Features />
+      <Workflow />
+      <Integrations />
+      <FAQ />
+      <CTA />
+    </AppLayout>
+  );
 }
