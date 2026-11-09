@@ -35,6 +35,7 @@ export function Integrations() {
                 width={40}
                 height={40}
                 className="shrink-0 rounded-lg"
+                style={{ width: 40, height: "auto" }}
               />
               <div className="flex flex-col gap-1">
                 <span className="font-medium">{integration.name}</span>
