@@ -64,6 +64,47 @@ export function requireCurrency(value: unknown, field: string): string {
   return value;
 }
 
+export function optionalUuid(value: unknown, field: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  return requireUuid(value, field);
+}
+
+/** An ISO 8601 date or date-time. Returns it normalised to UTC. */
+export function requireDate(value: unknown, field: string): Date {
+  if (typeof value !== "string") invalid(`${field} must be a date.`);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) invalid(`${field} must be a valid date.`);
+  return date;
+}
+
+export function optionalDate(value: unknown, field: string): Date | undefined {
+  if (value === undefined || value === null) return undefined;
+  return requireDate(value, field);
+}
+
+export function requireArray(
+  value: unknown,
+  field: string,
+  { min = 1, max = 100 }: { min?: number; max?: number } = {},
+): unknown[] {
+  if (!Array.isArray(value)) invalid(`${field} must be a list.`);
+  if (value.length < min || value.length > max) {
+    invalid(`${field} must have between ${min} and ${max} items.`);
+  }
+  return value;
+}
+
+export function requireInteger(
+  value: unknown,
+  field: string,
+  { min, max }: { min: number; max: number },
+): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
+    invalid(`${field} must be a whole number between ${min} and ${max}.`);
+  }
+  return value;
+}
+
 export function requireOneOf<T extends string>(
   value: unknown,
   field: string,

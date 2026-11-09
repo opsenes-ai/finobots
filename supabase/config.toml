@@ -51,3 +51,7 @@ secure_password_change = true
 max_frequency = "1m0s"
 otp_length = 6
 otp_expiry = 3600
+
+# PayPal calls this without a Supabase login; it checks PayPal's signature instead.
+[functions.webhooks]
+verify_jwt = false

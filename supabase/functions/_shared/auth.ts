@@ -13,7 +13,10 @@ export type AuthContext = {
 /** Rejects the request unless it carries a valid user session. */
 export async function requireUser(req: Request): Promise<AuthContext> {
   const client = createUserClient(req);
-  const { data, error } = await client.auth.getClaims();
+  const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+
+  // The function has no stored session, so the token is checked explicitly.
+  const { data, error } = await client.auth.getClaims(token);
   const userId = data?.claims?.sub;
 
   if (error || !userId) {
