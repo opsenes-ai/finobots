@@ -84,7 +84,7 @@ export function ConsoleSidebar() {
         ) : (
           <>
             <PanelLeftClose className="size-4 shrink-0" />
-            Menu
+            Collapse menu
           </>
         )}
       </button>
