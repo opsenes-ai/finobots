@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
@@ -19,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -49,7 +51,7 @@ export default function SignupPage() {
     const password = (form.elements.namedItem("password") as HTMLInputElement).value;
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -60,6 +62,18 @@ export default function SignupPage() {
 
     if (error) {
       toast.error(error.message);
+      setLoading(false);
+      return;
+    }
+
+    // With email confirmation on, Supabase returns a user with no identities
+    // instead of an error when the email is already registered. No second
+    // account is created; tell the user to log in instead.
+    if (data.user && (data.user.identities?.length ?? 0) === 0) {
+      toast.error("An account with this email already exists.", {
+        description: "Log in with your password or continue with PayPal.",
+        action: { label: "Log in", onClick: () => router.push("/auth/login") },
+      });
       setLoading(false);
       return;
     }

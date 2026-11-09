@@ -1,6 +1,7 @@
 import {
   SecurityAuthentication,
   SecurityPassword,
+  SecurityProviders,
   SecuritySessions,
 } from "@/components/pages/console/settings/pages/security";
 
@@ -10,6 +11,7 @@ export default function SecuritySettingsPage() {
       <h1 className="text-2xl font-semibold">Security</h1>
       <SecurityPassword />
       <SecurityAuthentication />
+      <SecurityProviders />
       <SecuritySessions />
     </div>
   );
