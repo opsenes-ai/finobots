@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { ConsoleHeader } from "./console-header";
 import { ConsoleSidebar } from "./console-sidebar";
 
+// ConsoleHeader (./console-header) is kept but not rendered for now.
 export function ConsoleLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-svh">
@@ -9,7 +9,6 @@ export function ConsoleLayout({ children }: { children: React.ReactNode }) {
         <ConsoleSidebar />
       </Suspense>
       <div className="flex flex-1 flex-col">
-        <ConsoleHeader />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>

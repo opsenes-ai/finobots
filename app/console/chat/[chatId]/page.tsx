@@ -62,9 +62,9 @@ export default function ChatSessionPage() {
   };
 
   return (
-    // Fills the console area below the 4rem header and inside the p-6 padding,
-    // with the message input at the bottom.
-    <div className="mx-auto flex h-[calc(100svh-7rem)] w-full max-w-3xl">
+    // Fills the console area inside the p-6 padding, with the message input
+    // at the bottom.
+    <div className="mx-auto flex h-[calc(100svh-3rem)] w-full max-w-3xl">
       <Chat
         className="h-full"
         messages={messages}

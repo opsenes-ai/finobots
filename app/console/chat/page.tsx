@@ -26,9 +26,9 @@ export default function NewChatPage() {
   };
 
   return (
-    // Fills the console area below the 4rem header and inside the p-6 padding,
-    // with the heading and input centred in it.
-    <div className="flex h-[calc(100svh-7rem)] items-center justify-center">
+    // Fills the console area inside the p-6 padding, with the heading and
+    // input centred in it.
+    <div className="flex h-[calc(100svh-3rem)] items-center justify-center">
       <div className="w-full max-w-2xl space-y-6">
         <h1 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           How can I help with your finances?

@@ -20,7 +20,8 @@ export function ProfileBar() {
           <AvatarFallback>U</AvatarFallback>
         </Avatar>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={8} className="w-48 p-1.5">
+      {/* Opens upward, since the trigger sits at the bottom of the sidebar. */}
+      <PopoverContent side="top" align="start" sideOffset={8} className="w-48 p-1.5">
         <button
           type="button"
           onClick={() => router.push("/console/settings")}

@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { ProfileBar } from "@/components/shared/console";
 
 const navItems = [
   { href: "/console/chat", label: "New Chat", icon: Plus },
@@ -68,10 +69,17 @@ export function ConsoleSidebar() {
           );
         })}
       </nav>
+      <div
+        className={`mt-auto flex py-3 ${
+          collapsed ? "justify-center" : "px-6"
+        }`}
+      >
+        <ProfileBar />
+      </div>
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className={`mt-auto flex h-16 w-full items-center border-t text-sm font-medium text-muted-foreground transition-colors hover:text-foreground ${
+        className={`flex h-16 w-full items-center border-t text-sm font-medium text-muted-foreground transition-colors hover:text-foreground ${
           collapsed ? "justify-center" : "justify-start gap-3 px-6"
         }`}
       >
