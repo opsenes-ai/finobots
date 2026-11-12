@@ -21,6 +21,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+// The shared demo account, filled in so visitors can sign in straight away.
+// Anyone can clear the fields and use their own account instead.
+const DEMO_EMAIL = "demo@finobots.com";
+const DEMO_PASSWORD = "Password@123";
+
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -90,7 +95,15 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              defaultValue={DEMO_EMAIL}
+              autoComplete="email"
+              required
+            />
           </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
@@ -104,6 +117,8 @@ export default function LoginPage() {
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
+                defaultValue={DEMO_PASSWORD}
+                autoComplete="current-password"
                 required
                 className="pr-9"
               />
