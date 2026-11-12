@@ -11,13 +11,23 @@
 //                                               actions function with action_id.
 //   { type: "error", message }  then  { type: "done" }
 //
-// Uses any OpenAI-compatible chat completions API. Secrets:
-//   AI_API_KEY, AI_MODEL, AI_BASE_URL (default https://api.openai.com/v1)
+// Uses the workspace's own provider key when one is active (see ai-providers),
+// otherwise the platform default. Both go through an OpenAI-compatible chat
+// completions API. Platform secrets: AI_API_KEY, AI_MODEL, AI_BASE_URL.
 // The conversation comes from the request; messages aren't stored yet.
 // Proposed actions are stored, with chat_id when one is given.
 
+import type { SupabaseClient } from "npm:@supabase/supabase-js@2.119.0";
+
+import {
+  type AiProviderName,
+  type AiTarget,
+  platformTarget,
+  providerTarget,
+} from "../_shared/ai.ts";
 import { requireOrgMember, requireUser } from "../_shared/auth.ts";
 import { corsHeaders, handleCors } from "../_shared/cors.ts";
+import { createAdminClient, loadAiKey } from "../_shared/database.ts";
 import { errorResponse, HttpError } from "../_shared/response.ts";
 import {
   optionalUuid,
@@ -77,10 +87,23 @@ function readProposal(args: Record<string, unknown>) {
   };
 }
 
-function env(name: string, fallback?: string): string {
-  const value = Deno.env.get(name) ?? fallback;
-  if (!value) throw new Error(`Missing environment variable ${name}`);
-  return value;
+const PLATFORM_MAX_TOKENS = 1024;
+const PLATFORM_HISTORY_LIMIT = 20;
+
+// The workspace's active provider key if it has one, else the platform default.
+async function resolveTarget(client: SupabaseClient, organizationId: string): Promise<AiTarget> {
+  const { data, error } = await client
+    .from("ai_providers")
+    .select("id, provider, model")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .maybeSingle<{ id: string; provider: AiProviderName; model: string | null }>();
+  if (error) throw error;
+  if (!data) return platformTarget();
+
+  const apiKey = await loadAiKey(createAdminClient(), data.id);
+  if (!apiKey) return platformTarget();
+  return providerTarget(data.provider, apiKey, data.model);
 }
 
 Deno.serve(async (req) => {
@@ -119,22 +142,26 @@ Deno.serve(async (req) => {
       if (!chat) throw new HttpError(404, "Chat not found.", "not_found");
     }
 
-    const upstream = await fetch(
-      `${env("AI_BASE_URL", "https://api.openai.com/v1").replace(/\/$/, "")}/chat/completions`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${env("AI_API_KEY")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: env("AI_MODEL"),
-          stream: true,
-          tools: TOOLS,
-          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-        }),
+    const target = await resolveTarget(auth.client, organizationId);
+
+    // The platform's own key keeps replies short and history small to limit
+    // cost. A workspace using its own key isn't capped here.
+    const history = target.ownKey ? messages : messages.slice(-PLATFORM_HISTORY_LIMIT);
+
+    const upstream = await fetch(`${target.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${target.apiKey}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        model: target.model,
+        stream: true,
+        ...(target.ownKey ? {} : { max_tokens: PLATFORM_MAX_TOKENS }),
+        tools: TOOLS,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+      }),
+    });
 
     if (!upstream.ok || !upstream.body) {
       console.error("AI request failed", upstream.status, await upstream.text());

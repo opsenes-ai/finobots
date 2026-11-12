@@ -230,6 +230,62 @@ export async function loadCredentials<T>(
   return JSON.parse(decoder.decode(plaintext)) as T;
 }
 
+// ---------------------------------------------------------------------------
+// AI provider keys. Encrypted the same way, with the ai_providers id bound to
+// each ciphertext. Stored in ai_provider_secrets (service role only).
+// ---------------------------------------------------------------------------
+
+export async function saveAiKey(
+  admin: SupabaseClient,
+  aiProviderId: string,
+  apiKey: string,
+): Promise<void> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: encoder.encode(aiProviderId) },
+    await credentialsKey(),
+    encoder.encode(apiKey),
+  );
+
+  const stored: EncryptedSecrets = {
+    v: 1,
+    iv: toBase64(iv),
+    data: toBase64(new Uint8Array(ciphertext)),
+  };
+
+  const { error } = await admin
+    .from("ai_provider_secrets")
+    .upsert({ ai_provider_id: aiProviderId, secrets: stored });
+  if (error) throw error;
+}
+
+export async function loadAiKey(
+  admin: SupabaseClient,
+  aiProviderId: string,
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("ai_provider_secrets")
+    .select("secrets")
+    .eq("ai_provider_id", aiProviderId)
+    .maybeSingle<{ secrets: EncryptedSecrets }>();
+
+  if (error) throw error;
+  if (!data) return null;
+  if (data.secrets?.v !== 1) throw new Error("Unsupported key format");
+
+  const plaintext = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: fromBase64(data.secrets.iv),
+      additionalData: encoder.encode(aiProviderId),
+    },
+    await credentialsKey(),
+    fromBase64(data.secrets.data),
+  );
+
+  return decoder.decode(plaintext);
+}
+
 export async function deleteCredentials(
   admin: SupabaseClient,
   connectionId: string,
