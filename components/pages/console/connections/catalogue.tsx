@@ -1,8 +1,11 @@
-import Image from "next/image";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+"use client";
 
-// Available connectors. PayPal is the first; the rest are placeholders.
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { setupOpen } from "./connected";
+
+// Available connectors.
 export function ConnectionsCatalogue({ className }: { className?: string }) {
   return (
     <Card className={className}>
@@ -21,20 +24,12 @@ export function ConnectionsCatalogue({ className }: { className?: string }) {
           />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium">PayPal</p>
-            <p className="truncate text-xs text-muted-foreground">
-              Payments, balances, and invoices
-            </p>
+            <p className="text-muted-foreground truncate text-xs">Balances, transactions and invoices</p>
           </div>
+          <Button size="sm" variant="outline" onClick={() => setupOpen.set(true)}>
+            Connect
+          </Button>
         </div>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
-            <Skeleton className="size-10 shrink-0 rounded-lg" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-3 w-full" />
-            </div>
-          </div>
-        ))}
       </CardContent>
     </Card>
   );
