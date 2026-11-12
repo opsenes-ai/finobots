@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import type { UserIdentity } from "@supabase/supabase-js";
 import { createClient } from "@/lib/client";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const PAYPAL_PROVIDER = "custom:paypal";
 
@@ -85,18 +84,7 @@ export function SecurityProviders() {
       <h3 className="text-sm font-medium">Providers</h3>
       <div className="divide-y rounded-lg border">
         {identities === null ? (
-          Array.from({ length: 1 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between gap-4 p-3">
-              <div className="flex items-center gap-3">
-                <Skeleton className="size-8 shrink-0 rounded-md" />
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-24" />
-                  <Skeleton className="h-3 w-36" />
-                </div>
-              </div>
-              <Skeleton className="h-7 w-16 shrink-0" />
-            </div>
-          ))
+          <p className="text-muted-foreground p-3 text-sm">Loading…</p>
         ) : (
           <>
             <div className="flex items-center justify-between gap-4 p-3">

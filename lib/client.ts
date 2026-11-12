@@ -13,3 +13,18 @@ export async function getWorkspaceId() {
   const rows = data as { organization_id: string }[] | null
   return rows?.[0]?.organization_id ?? null
 }
+
+// The message an edge function sent back with an error, if there is one.
+export async function functionErrorMessage(error: unknown): Promise<string> {
+  const context = (error as { context?: Response })?.context
+  if (context && typeof context.json === 'function') {
+    try {
+      const body = await context.json()
+      const message = body?.error?.message ?? body?.message
+      if (typeof message === 'string') return message
+    } catch {
+      // Fall through to the generic message.
+    }
+  }
+  return 'Something went wrong. Try again.'
+}

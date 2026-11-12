@@ -1,5 +1,4 @@
 import {
-  DataDeletion,
   DataExports,
   DataImports,
   DataRetention,
@@ -12,7 +11,6 @@ export default function DataSettingsPage() {
       <DataImports />
       <DataExports />
       <DataRetention />
-      <DataDeletion />
     </div>
   );
 }
