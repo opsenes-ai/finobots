@@ -2,105 +2,101 @@
 
 This document outlines the planned direction and milestones for Finobots.
 
-## Status Legend
+## Status legend
 
-- 🔄 In Progress
-- 📋 Planned
 - ✅ Completed
+- 🔄 In progress
+- 📋 Planned
 
 ---
 
-## Phase 1 — Foundation (v0.1.x) ✅
+## Phase 1: Foundation (v0.1.x) ✅
 
 - [x] Next.js 16 project scaffold with App Router
-- [x] Tailwind CSS v4 and shadcn/ui setup
+- [x] Tailwind CSS v4 and shadcn/ui set-up
 - [x] App and console layout components
 - [x] Authentication pages (login, signup, forgot, reset)
 - [x] Legal pages (terms, privacy, cookies)
 - [x] Project documentation and open-source files
 
-## Phase 2 — Authentication & Users (v0.2.x) 📋
+## Phase 2: Authentication and workspaces ✅
 
-- [ ] User registration with email verification
-- [ ] Login with session management
-- [ ] Password reset flow with email
-- [ ] Protected routes and middleware
-- [ ] User profile and settings
-- [ ] Role-based access control (owner, admin, member)
-- [ ] Multi-tenant organization support
+- [x] Email sign-up with confirmation
+- [x] Session policy (1 day, 30 days with Remember me, 1 day idle)
+- [x] Password reset by email
+- [x] Protected console routes (`proxy.ts`)
+- [x] Profile settings (avatar, display name)
+- [x] One workspace per user, isolated with row level security
+- [x] Authenticator-app two-factor
+- [x] PayPal sign-in and account linking (needs a custom OAuth provider in Supabase)
 
-## Phase 3 — AI Chat Interface (v0.3.x) 📋
+## Phase 3: AI chat 🔄
 
-- [ ] Chat UI with message history
-- [ ] Streaming AI responses
-- [ ] Context-aware financial assistant
-- [ ] Natural language query parsing
-- [ ] Interactive data tables in chat
-- [ ] Inline charts and visualizations
+- [x] Chat UI with saved history and Recents
+- [x] Streaming replies (Claude Haiku 5.5 built in)
+- [x] Bring your own Claude, OpenAI or Gemini key
+- [x] Tone, length, instructions and memories
+- [x] Credits and USD spending limits
+- [x] Approval cards for proposed actions
+- [ ] Read tools: accounts, transactions, cash flow and PayPal invoices
+- [ ] Interactive tables and charts inside chat
 - [ ] Conversation export
 
-## Phase 4 — Invoice Management (v0.4.x) 📋
+## Phase 4: Invoices 📋
 
-- [ ] Create invoices with line items
-- [ ] Track invoice status (draft, sent, paid, overdue)
-- [ ] Send invoices via email
-- [ ] Recurring invoice templates
-- [ ] Invoice PDF generation
-- [ ] Client management
-- [ ] Tax and discount calculations
+- [x] Send an existing PayPal invoice, with approval
+- [x] Send a payment reminder, with approval
+- [ ] Create invoices with line items, with approval
+- [ ] Invoice list with status (draft, sent, paid, overdue)
+- [ ] Customer list
 
-## Phase 5 — Payments & Expenses (v0.5.x) 📋
+## Phase 5: Payments and expenses 🔄
 
-- [ ] Record payments and link to invoices
-- [ ] Payment processor integration
-- [ ] Expense logging with categories
-- [ ] Receipt upload and OCR
-- [ ] Multi-currency support
-- [ ] Payment reminders and notifications
+- [x] Import PayPal transactions
+- [x] Categories (presets and custom)
+- [x] Receipt upload
+- [x] Multi-currency balances, never mixed
+- [x] PayPal payment webhooks
+- [ ] Receipt text extraction
+- [ ] Payment reminders on a schedule
 
-## Phase 6 — Reconciliation & Cash Flow (v0.6.x) 📋
+## Phase 6: Reconciliation and cash flow 🔄
 
-- [ ] Bank account connection and transaction import
+- [x] PayPal balance sync
+- [x] Manual reconciliation with references
+- [x] Cash flow dashboard and monthly trends
+- [x] 30-day forecast
 - [ ] Automatic transaction matching
-- [ ] Manual reconciliation tools
-- [ ] Cash flow dashboard with charts
-- [ ] Profit and loss reporting
-- [ ] Balance sheet overview
-- [ ] Financial period summaries
+- [ ] Profit and loss report
 
-## Phase 7 — Approvals & Workflows (v0.7.x) 📋
+## Phase 7: Approvals and notifications 🔄
 
-- [ ] Approval request system
-- [ ] Multi-level approval chains
-- [ ] Notification system (email, in-app)
-- [ ] Audit log and activity history
-- [ ] Scheduled report delivery
-- [ ] Custom workflow builder
+- [x] Approve or reject agent actions, run at most once
+- [x] Notification preferences
+- [ ] Email and in-app delivery
+- [ ] Approvals page with history
+- [ ] Audit log
 
-## Phase 8 — Integrations & API (v0.8.x) 📋
+## Phase 8: Integrations and API 🔄
 
-- [ ] Public REST API
-- [ ] Webhook system
-- [ ] Banking integrations
-- [ ] Accounting software sync (QuickBooks, Xero)
-- [ ] Calendar and reminder integrations
-- [ ] Slack and Teams notifications
+- [x] Scoped API keys (create, revoke, hashed)
+- [ ] API endpoints that accept the keys
+- [ ] More payment providers
+- [ ] Accounting software sync
 
-## Phase 9 — Polish & Scale (v1.0.x) 📋
+## Phase 9: Polish and scale (v1.0) 📋
 
-- [ ] Performance optimization and caching
-- [ ] Comprehensive test suite
+- [ ] Detail pages for accounts, transactions and connections
+- [ ] Data retention enforcement
+- [ ] Test suite
 - [ ] Accessibility audit (WCAG 2.2 AA)
-- [ ] Internationalization (i18n)
-- [ ] Dark mode polish
-- [ ] Mobile-responsive dashboard
-- [ ] Documentation site
-- [ ] Production deployment guides
+- [ ] Internationalisation
+- [ ] Documentation site and deployment guides
 
 ---
 
 ## Feedback
 
-Have a feature request or suggestion? Open an [issue](https://github.com/opsenes-ai/finobots/issues/new) on GitHub or start a [discussion](https://github.com/opsenes-ai/finobots/discussions).
+Have a feature request or suggestion? Open an [issue](https://github.com/opsenes-ai/finobots/issues/new) or start a [discussion](https://github.com/opsenes-ai/finobots/discussions).
 
-This roadmap is subject to change based on community feedback and project priorities.
+This roadmap may change based on community feedback and project priorities.

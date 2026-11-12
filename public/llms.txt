@@ -2,7 +2,7 @@
 
 > An open-source AI financial operations agent for small businesses.
 
-Finobots helps users manage invoices, payments, expenses, reconciliation, and cash flow through chat, with interactive tables, charts, and approvals.
+Finobots connects to PayPal and lets you manage balances, transactions, reconciliation and cash flow, with a chat assistant that proposes actions such as sending an invoice or a payment reminder. Nothing runs until you approve it.
 
 ## Product
 
@@ -13,53 +13,57 @@ Finobots helps users manage invoices, payments, expenses, reconciliation, and ca
 
 ## Features
 
-- AI-powered chat interface for financial operations
-- Invoice creation, tracking, and follow-up
-- Payment monitoring with status updates
-- Expense management and categorisation
-- Cash flow insights and forecasting
-- Account reconciliation
-- Financial reporting and summaries
-- Approval workflows for AI-proposed actions
+- Chat with streamed replies, saved history and Recents
+- Built-in Claude Haiku 5.5, or your own Claude, OpenAI or Gemini key
+- Reply tone, length, custom instructions and memories
+- Approval cards for proposed PayPal actions (send invoice, send reminder)
+- Credits for the built-in model (100 credits, 5 added daily) and daily, weekly and monthly USD spending limits
+- PayPal connections: balance sync, transaction import, payment webhooks
+- Accounts: balances per currency and manual accounts
+- Transactions: AG Grid ledger, filters, categories, reconciliation and receipts
+- Cash flow: money in and out, monthly trends, spending by category, 30-day forecast
+- Settings: profile, personalization, usage, data export, two-factor, notifications, API keys
 
 ## Integrations
 
-- PayPal (available, sandbox support)
-- Venmo (coming soon)
+- PayPal (sandbox and live)
+- Anthropic Claude, OpenAI, Google Gemini
 
-## Tech Stack
+## Tech stack
 
 - Framework: Next.js 16 (App Router)
 - Language: TypeScript
-- UI: React 19, Tailwind CSS v4, shadcn/ui (base-nova)
-- Icons: Lucide React
-- Primitives: Base UI
-- Backend: Supabase
+- UI: React 19, Tailwind CSS v4, shadcn/ui (base-nova), Base UI, Lucide React
+- Grid: AG Grid Community
+- Backend: Supabase (Auth, Postgres with row level security, Storage, Edge Functions)
 - Deployment: Vercel
 
 ## Routes
 
-- / — Home (landing page)
-- /auth/login — Login
+- / — Home
+- /auth/login — Log in
 - /auth/signup — Sign up
 - /auth/forgot — Forgot password
 - /auth/reset — Reset password
 - /legal/terms — Terms of Service
 - /legal/privacy — Privacy Policy
 - /legal/cookies — Cookie Policy
-- /console — Dashboard (redirects to /console/chat)
+- /console — Redirects to /console/chat
 - /console/chat — New chat
 - /console/chat/[chatId] — Chat session
-- /console/accounts — Accounts overview
-- /console/accounts/[accountId] — Account detail
-- /console/cashflow — Cash flow
+- /console/recents — Previous chats
+- /console/accounts — Accounts
 - /console/transaction — Transactions
-- /console/transaction/[recordId] — Transaction detail
+- /console/cashflow — Cash flow
 - /console/connections — Connections
-- /console/connections/[connectionId] — Connection detail
-- /console/recents — Recent chats
-- /console/settings — Settings
+- /console/settings/profile — Profile
+- /console/settings/personalization — Models, tone, instructions, memories
+- /console/settings/usage — Credits, limits and usage
+- /console/settings/data — Import, export, retention
+- /console/settings/security — Password, two-factor, sessions, sign-in providers
+- /console/settings/notifications — Notification preferences
+- /console/settings/api — API keys
 
-## License
+## Licence
 
 MIT — https://github.com/opsenes-ai/finobots/blob/main/LICENSE

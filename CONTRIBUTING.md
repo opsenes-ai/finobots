@@ -1,16 +1,17 @@
 # Contributing to Finobots
 
-Thank you for your interest in contributing! This guide will help you get started.
+Thanks for your interest in contributing. This guide covers set-up, conventions and the pull request process.
 
 ## Prerequisites
 
-- Node.js 20+
-- npm 10+
+- Node.js 20 or later, npm 10 or later
 - Git
+- A Supabase project for development (a free one is fine)
+- Optional: a PayPal sandbox app and an Anthropic API key, to try PayPal features and chat
 
-## Development Setup
+## Development set-up
 
-1. **Fork and clone the repository**
+1. **Fork and clone**
 
    ```bash
    git clone https://github.com/YOUR_USERNAME/finobots.git
@@ -23,106 +24,106 @@ Thank you for your interest in contributing! This guide will help you get starte
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Environment variables**
 
    ```bash
    cp .env.example .env.local
    ```
 
-   Fill in the values in `.env.local` as needed for local development.
+   Fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
-4. **Start the development server**
+4. **Database and functions**
+
+   Link your Supabase project, push the migrations, set the function secrets and deploy the functions. The full steps are in the README under [Supabase set-up](README.md#supabase-set-up).
+
+5. **Start the dev server**
 
    ```bash
    npm run dev
    ```
 
-5. **Create a branch for your changes**
+6. **Create a branch**
 
    ```bash
    git checkout -b feat/your-feature-name
    ```
 
-## Code Style
+## Code style
 
-- **TypeScript** is required for all new code.
-- Use the existing import alias `@/*` for project imports.
-- Follow the existing component structure under `components/ui/` for shadcn components.
-- Server components are the default. Only use `"use client"` when interactivity is needed (state, event handlers, browser APIs).
-- Keep components focused and composable.
-- Use Tailwind CSS classes for styling. Do not introduce additional CSS frameworks.
-- Add `data-slot` attributes when creating new shadcn-compatible components.
+### Front end
 
-## Commit Conventions
+- TypeScript (strict) for all code. Use the `@/*` import alias.
+- Server components by default. Add `"use client"` only for state, events or browser APIs.
+- Read the relevant guide in `node_modules/next/dist/docs/` before using Next.js APIs; this version differs from older ones. `cacheComponents` is on, so request data (such as route params read on the client) must sit inside a `<Suspense>` boundary.
+- Use shadcn/ui components from `components/ui/` (Base UI primitives, not Radix). Add new ones with `npx shadcn@latest add <name>`.
+- Style with Tailwind classes and the theme tokens in `app/globals.css`. Don't add other CSS frameworks.
+- Use `cn()`, `formatMoney()` and `formatDate()` from `@/lib/utils`.
+- Call edge functions with `callFunction()` from `@/lib/client`. It returns `{ data, error }` with the response unwrapped.
+- Share data between cards on a page with `createResource()` and `createStore()` from `@/lib/client`.
+- Keep copy short and in British English. Show an empty state when there's no data, not placeholder content.
+- Make interactive elements accessible: labels for inputs, `aria-label` for icon buttons, visible focus.
+
+### Database
+
+- Add a new migration in `supabase/migrations/` (`YYYYMMDDHHMMSS_description.sql`); never edit one that has been applied.
+- Turn on row level security for every new table and add policies scoped by `organization_id`.
+- Revoke client privileges on tables that hold secrets.
+- Check with `npx supabase db push --dry-run` before pushing.
+
+### Edge functions
+
+- Put shared code in `supabase/functions/_shared/`.
+- Validate every input with the helpers in `_shared/validation.ts`.
+- Use the user's client (`requireUser`) so row level security applies. Use the admin client only when the task needs it, and check access first.
+- Reply with `json()` and throw `HttpError` for errors the user should see.
+- Type-check before deploying:
+
+  ```bash
+  npx --yes deno check --no-lock supabase/functions/<name>/index.ts
+  ```
+
+## Commit conventions
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
 <type>(<scope>): <description>
-
-[optional body]
-
-[optional footer]
 ```
 
-### Types
-
-- `feat` — a new feature
-- `fix` — a bug fix
-- `docs` — documentation changes
-- `style` — formatting, no code change
-- `refactor` — code change that neither fixes a bug nor adds a feature
-- `perf` — performance improvement
-- `test` — adding or correcting tests
-- `chore` — build, dependencies, tooling
-
-### Examples
+Types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`.
 
 ```
-feat(auth): add email verification flow
-fix(console): correct sidebar width on mobile
-docs(readme): update installation instructions
+feat(transactions): add receipt upload
+fix(chat): read route params inside Suspense
+docs(readme): add PayPal sandbox steps
 ```
 
-## Pull Request Process
+## Pull request process
 
-1. **Run lint and build before submitting**
+1. **Run lint and build**
 
    ```bash
    npm run lint
    npm run build
    ```
 
-2. **Write a clear PR description** that includes:
-   - What changes were made and why
-   - How to test the changes
-   - Any breaking changes or migration notes
-   - Related issues (e.g., `Closes #123`)
+2. **Describe the change**: what and why, how to test it, any migrations or new secrets, and related issues (`Closes #123`).
+3. **Keep it focused**: one feature or fix per PR.
+4. **Update the docs** when you change set-up, environment variables, secrets, functions or project structure.
+5. **Add a changelog entry** under `[Unreleased]` in `CHANGELOG.md`.
 
-3. **Keep PRs focused** — one feature or fix per PR makes review faster.
+## Reporting bugs
 
-4. **Update documentation** if your changes affect the README, env variables, or project structure.
+Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with a clear title, steps to reproduce, expected and actual behaviour, screenshots if helpful, and your environment (OS, Node.js version, browser). For security issues, follow [SECURITY.md](SECURITY.md) instead.
 
-5. **Add a changelog entry** under `[Unreleased]` in `CHANGELOG.md` when applicable.
+## Requesting features
 
-## Reporting Bugs
+Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with the `enhancement` label. Describe the feature, why it's useful and any alternatives you've considered.
 
-Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with:
+## Code of conduct
 
-- A clear title and description
-- Steps to reproduce
-- Expected and actual behavior
-- Screenshots if applicable
-- Your environment (OS, Node.js version, browser)
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Requesting Features
+## Questions
 
-Open a [GitHub issue](https://github.com/opsenes-ai/finobots/issues/new) with the `enhancement` label. Describe the feature, why it would be useful, and any alternatives you have considered.
-
-## Code of Conduct
-
-By participating in this project, you agree to abide by our [Code of Conduct](CODE_OF_CONDUCT.md). Please review it before contributing.
-
-## Questions?
-
-Feel free to open a [GitHub Discussion](https://github.com/opsenes-ai/finobots/discussions) or reach out via issues.
+Open a [GitHub Discussion](https://github.com/opsenes-ai/finobots/discussions).
