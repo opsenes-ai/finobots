@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Chat } from "@/components/pages/console/chat/ui/chat";
@@ -63,8 +64,8 @@ function ProposedActions({
   );
 }
 
-export default function ChatSessionPage({ params }: { params: Promise<{ chatId: string }> }) {
-  const { chatId } = use(params);
+function ChatSession() {
+  const { chatId } = useParams<{ chatId: string }>();
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -312,5 +313,14 @@ export default function ChatSessionPage({ params }: { params: Promise<{ chatId: 
         />
       </div>
     </div>
+  );
+}
+
+// The route param is read at request time, so it sits inside a Suspense boundary.
+export default function ChatSessionPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatSession />
+    </Suspense>
   );
 }
