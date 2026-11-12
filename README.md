@@ -86,6 +86,8 @@ Finobots is built to be safe by default: every workspace is isolated with row le
 - Anything that needs credentials or an external API runs in an edge function: chat, approvals, PayPal sync and import, cash flow calculations, and credential storage.
 - PayPal sends payment events to a webhook function, which verifies each one before saving it.
 
+For the full picture, with diagrams of the data model, chat flow, approvals and security, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## App navigation
 
 | Section | Purpose |
@@ -253,6 +255,8 @@ finobots/
 │   ├── shared/
 │   │   └── console/               # profile bar
 │   └── ui/                        # shadcn/ui components and the AG Grid wrapper
+├── docs/
+│   └── ARCHITECTURE.md            # how the system fits together
 ├── lib/
 │   ├── auth/                      # sessions, profile, server actions
 │   ├── client.ts                  # browser Supabase client and helpers
