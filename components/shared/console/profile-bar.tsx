@@ -10,9 +10,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { KeyRound, LogOut, User } from "lucide-react";
+import { Gauge, KeyRound, LogOut, MessageSquare, Sparkles, User } from "lucide-react";
 
 const FALLBACK_NAME = "Profile";
+const FEEDBACK_URL = "https://tally.so/r/1WdJ6g";
 
 // Two-letter initials: first letter of the first two words ("Jane Doe" -> "JD"),
 // or the first two letters of a single word ("test" -> "TE").
@@ -103,7 +104,14 @@ export function ProfileBar({
         </Suspense>
       </PopoverTrigger>
       {/* Opens upward, since the trigger sits at the bottom of the sidebar. */}
-      <PopoverContent side="top" align="start" sideOffset={8} className="w-48 p-1.5">
+      {/* Centred over the sidebar with equal space on both sides: the width is
+          the trigger's (the sidebar's) minus 0.75rem a side. */}
+      <PopoverContent
+        side="top"
+        align="center"
+        sideOffset={8}
+        className="w-[calc(var(--anchor-width)-1.5rem)] min-w-48 gap-0.5 p-1.5"
+      >
         <button
           type="button"
           onClick={() => {
@@ -114,6 +122,29 @@ export function ProfileBar({
         >
           <User className="size-4" />
           Profile
+        </button>
+        <div role="separator" aria-orientation="horizontal" className="-mx-1.5 my-1 h-px bg-border" />
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            router.push("/console/settings/personalization");
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-muted"
+        >
+          <Sparkles className="size-4" />
+          Personalization
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false);
+            router.push("/console/settings/usage");
+          }}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-muted"
+        >
+          <Gauge className="size-4" />
+          Usage
         </button>
         <button
           type="button"
@@ -126,6 +157,20 @@ export function ProfileBar({
           <KeyRound className="size-4" />
           API
         </button>
+        <div role="separator" aria-orientation="horizontal" className="-mx-1.5 my-1 h-px bg-border" />
+        {/* Opens the feedback form in a new tab. */}
+        <a
+          href={FEEDBACK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => setOpen(false)}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-muted"
+        >
+          <MessageSquare className="size-4" />
+          Feedback
+          <span className="sr-only">(opens in a new tab)</span>
+        </a>
+        <div role="separator" aria-orientation="horizontal" className="-mx-1.5 my-1 h-px bg-border" />
         <button
           type="button"
           onClick={() => {
