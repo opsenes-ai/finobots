@@ -1,17 +1,26 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import { typeLabel, useSelectedAccount } from "./listing";
 
 // The selected account.
-export function AccountDetails({ className }: { className?: string }) {
+export function AccountDetails({ className, linkToPage = true }: { className?: string; linkToPage?: boolean }) {
   const { data, account } = useSelectedAccount();
 
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle>Details</CardTitle>
+        {linkToPage && account ? (
+          <CardAction>
+            <Button variant="ghost" size="sm" render={<Link href={`/console/accounts/${account.id}`} />} nativeButton={false}>
+              Open
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent>
         {!account ? (

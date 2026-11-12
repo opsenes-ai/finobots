@@ -1,12 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { setupOpen } from "./connected";
+import { focusSetup, usePayPalConnected } from "./connected";
 
 // Available connectors.
 export function ConnectionsCatalogue({ className }: { className?: string }) {
+  const connected = usePayPalConnected();
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -26,9 +29,13 @@ export function ConnectionsCatalogue({ className }: { className?: string }) {
             <p className="text-sm font-medium">PayPal</p>
             <p className="text-muted-foreground truncate text-xs">Balances, transactions and invoices</p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setupOpen.set(true)}>
-            Connect
-          </Button>
+          {connected ? (
+            <Badge variant="secondary">Connected</Badge>
+          ) : connected === false ? (
+            <Button size="sm" variant="outline" onClick={focusSetup}>
+              Connect
+            </Button>
+          ) : null}
         </div>
       </CardContent>
     </Card>

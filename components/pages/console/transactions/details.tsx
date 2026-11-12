@@ -1,18 +1,27 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, formatDate, formatMoney } from "@/lib/utils";
 import { useSelectedTransaction } from "./ledger";
 
 // The selected transaction.
-export function TransactionDetails({ className }: { className?: string }) {
+export function TransactionDetails({ className, linkToPage = true }: { className?: string; linkToPage?: boolean }) {
   const { data, transaction } = useSelectedTransaction();
 
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle>Details</CardTitle>
+        {linkToPage && transaction ? (
+          <CardAction>
+            <Button variant="ghost" size="sm" render={<Link href={`/console/transaction/${transaction.id}`} />} nativeButton={false}>
+              Open
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent>
         {!transaction ? (

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { callFunction } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
 import { connectionsResource, selectedConnection, StatusBadge, useSelectedConnection } from "./connected";
@@ -11,7 +12,7 @@ import { connectionsResource, selectedConnection, StatusBadge, useSelectedConnec
 type SyncResult = { results: { status: "active" | "error"; accounts?: number; message?: string }[] };
 
 // The selected connection, with test, sync, import and disconnect.
-export function ConnectionDetails({ className }: { className?: string }) {
+export function ConnectionDetails({ className, linkToPage = true }: { className?: string; linkToPage?: boolean }) {
   const { data, connection } = useSelectedConnection();
   const [busy, setBusy] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -91,6 +92,13 @@ export function ConnectionDetails({ className }: { className?: string }) {
     <Card className={className}>
       <CardHeader>
         <CardTitle>Details</CardTitle>
+        {linkToPage && connection ? (
+          <CardAction>
+            <Button variant="ghost" size="sm" render={<Link href={`/console/connections/${connection.id}`} />} nativeButton={false}>
+              Open
+            </Button>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent>
         {!connection ? (

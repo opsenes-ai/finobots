@@ -10,7 +10,6 @@ export type Recent = {
   id: string;
   title: string;
   updated_at: string;
-  preview: string | null;
 };
 
 function formatTime(value: string) {
@@ -91,14 +90,13 @@ export function RecentEntry({
 
   return (
     <div className="bg-card hover:bg-muted/40 flex items-center gap-4 rounded-lg border p-4 transition-colors">
-      <Link href={`/console/chat/${recent.id}`} className="min-w-0 flex-1 space-y-1 outline-none focus-visible:underline">
+      <Link href={`/console/chat/${recent.id}`} className="min-w-0 flex-1 outline-none focus-visible:underline">
         <div className="flex items-center justify-between gap-4">
           <p className="truncate text-sm font-medium">{recent.title}</p>
           <time dateTime={recent.updated_at} className="text-muted-foreground shrink-0 text-xs">
             {formatTime(recent.updated_at)}
           </time>
         </div>
-        {recent.preview ? <p className="text-muted-foreground truncate text-xs">{recent.preview}</p> : null}
       </Link>
       <RecentActions disabled={busy} onRename={() => setRenaming(true)} onDelete={() => setConfirming(true)} />
     </div>

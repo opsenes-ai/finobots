@@ -33,8 +33,16 @@ export const connectionsResource = createResource(async () => {
 
 export const selectedConnection = createStore<string | null>(null);
 
-// Shared by Connect buttons, so they can open the set-up form.
-export const setupOpen = createStore(false);
+/** True once PayPal is connected, so the page stops offering to connect it again. */
+export function usePayPalConnected() {
+  const data = connectionsResource.use();
+  return data === undefined ? undefined : data.items.some((item) => item.provider === "paypal");
+}
+
+/** Moves focus to the set-up form, which only shows while nothing is connected. */
+export function focusSetup() {
+  document.getElementById("connection-name")?.focus();
+}
 
 export const STATUS_LABELS: Record<Connection["status"], string> = {
   pending: "Pending",

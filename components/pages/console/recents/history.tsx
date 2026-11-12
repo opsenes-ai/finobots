@@ -38,31 +38,11 @@ export function RecentHistory() {
         .limit(100);
       if (error) toast.error("Couldn't load your chats.");
 
-      const list = chats ?? [];
-      const previews = new Map<string, string>();
-      if (list.length > 0) {
-        // Newest first, so the first message seen for a chat is its latest.
-        const { data: messages } = await supabase
-          .from("chat_messages")
-          .select("chat_id, content, created_at")
-          .in(
-            "chat_id",
-            list.map((chat) => chat.id as string)
-          )
-          .order("created_at", { ascending: false })
-          .limit(500);
-        for (const message of messages ?? []) {
-          const id = message.chat_id as string;
-          if (!previews.has(id)) previews.set(id, (message.content as string).slice(0, 160));
-        }
-      }
-
       setRecents(
-        list.map((chat) => ({
+        (chats ?? []).map((chat) => ({
           id: chat.id as string,
           title: chat.title as string,
           updated_at: chat.updated_at as string,
-          preview: previews.get(chat.id as string) ?? null,
         }))
       );
     }

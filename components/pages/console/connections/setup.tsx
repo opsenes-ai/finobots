@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { callFunction } from "@/lib/client";
-import { connectionsResource, selectedConnection, setupOpen } from "./connected";
+import { connectionsResource, selectedConnection, usePayPalConnected } from "./connected";
 
 const ENVIRONMENTS = [
   { value: "sandbox", label: "Sandbox" },
@@ -18,16 +18,16 @@ const ENVIRONMENTS = [
 // Connect a PayPal REST app. The secret is checked with PayPal, then stored
 // encrypted on the server and never shown again.
 export function ConnectionSetup({ className }: { className?: string }) {
-  const open = setupOpen.use();
   const data = connectionsResource.use();
+  const connected = usePayPalConnected();
   const [name, setName] = useState("PayPal sandbox");
   const [environment, setEnvironment] = useState("sandbox");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Shown straight away when nothing is connected yet.
-  const showForm = open || data?.items.length === 0;
+  // Only while PayPal isn't connected; once it is, it's managed from Details.
+  const showForm = connected === false;
 
   async function connect() {
     const organizationId = data?.organizationId;
@@ -49,7 +49,6 @@ export function ConnectionSetup({ className }: { className?: string }) {
     }
     setClientId("");
     setClientSecret("");
-    setupOpen.set(false);
     await connectionsResource.reload();
     selectedConnection.set(result.connection.id);
     toast.success("PayPal connected. Sync it to bring in balances and transactions.");
@@ -59,7 +58,9 @@ export function ConnectionSetup({ className }: { className?: string }) {
     <Card className={className}>
       <CardHeader>
         <CardTitle>Set up</CardTitle>
-        <CardDescription>Use the client ID and secret from your PayPal developer app.</CardDescription>
+        {showForm ? (
+          <CardDescription>Use the client ID and secret from your PayPal developer app.</CardDescription>
+        ) : null}
       </CardHeader>
       <CardContent>
         {showForm ? (
@@ -130,17 +131,14 @@ export function ConnectionSetup({ className }: { className?: string }) {
               >
                 {busy ? "Checking with PayPal…" : "Connect"}
               </Button>
-              {data && data.items.length > 0 ? (
-                <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setupOpen.set(false)}>
-                  Cancel
-                </Button>
-              ) : null}
             </div>
           </form>
+        ) : connected ? (
+          <p className="text-muted-foreground text-sm">
+            PayPal is connected. Sync, import, test or disconnect it from Details.
+          </p>
         ) : (
-          <Button variant="outline" size="sm" onClick={() => setupOpen.set(true)}>
-            Add another connection
-          </Button>
+          <p className="text-muted-foreground text-sm">Loading…</p>
         )}
       </CardContent>
     </Card>

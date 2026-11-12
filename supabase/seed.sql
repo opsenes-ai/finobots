@@ -1,3 +1,0 @@
--- Seed data for local development. Runs on `supabase db reset`.
--- Intentionally empty: create users through the signup flow so the
--- profile trigger fires and passwords are hashed by Supabase Auth.

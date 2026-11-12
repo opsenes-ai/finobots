@@ -4,13 +4,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { callFunction } from "@/lib/client";
-import { connectionsResource, setupOpen } from "./connected";
+import { connectionsResource, focusSetup, usePayPalConnected } from "./connected";
 
 type SyncResult = { results: { status: "active" | "error" }[] };
 
-// Sync every connection, or add a new one.
+// Sync every connection, or connect PayPal if it isn't yet.
 export function ConnectionActions() {
   const data = connectionsResource.use();
+  const connected = usePayPalConnected();
   const [busy, setBusy] = useState(false);
 
   async function syncAll() {
@@ -31,14 +32,15 @@ export function ConnectionActions() {
     await connectionsResource.reload();
   }
 
-  return (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" disabled={busy || !data?.items.length} onClick={syncAll}>
-        {busy ? "Syncing…" : "Sync all"}
-      </Button>
-      <Button size="sm" onClick={() => setupOpen.set(true)}>
-        Add connection
-      </Button>
-    </div>
+  if (connected === undefined) return null;
+
+  return connected ? (
+    <Button variant="outline" size="sm" disabled={busy} onClick={syncAll}>
+      {busy ? "Syncing…" : "Sync all"}
+    </Button>
+  ) : (
+    <Button size="sm" onClick={focusSetup}>
+      Connect PayPal
+    </Button>
   );
 }

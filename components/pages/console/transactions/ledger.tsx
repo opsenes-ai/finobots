@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import {
   AllCommunityModule,
   ModuleRegistry,
@@ -10,7 +11,7 @@ import {
 } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createClient, createResource, createStore, getWorkspaceId } from "@/lib/client";
 import { formatDate, formatMoney } from "@/lib/utils";
 
@@ -52,6 +53,9 @@ export const filtersStore = createStore<Filters>({ search: "", status: "all", ac
 // The newest transactions that match the filters (search is applied in the grid).
 const MAX_ROWS = 1000;
 
+const COLUMNS =
+  "id, account_id, external_id, amount, currency, status, description, counterparty, category, occurred_at, receipt_path, metadata, created_at, updated_at, account:accounts(name)";
+
 export const transactionsResource = createResource(async () => {
   const organizationId = await getWorkspaceId();
   if (!organizationId) {
@@ -62,9 +66,7 @@ export const transactionsResource = createResource(async () => {
 
   let query = supabase
     .from("transactions")
-    .select(
-      "id, account_id, external_id, amount, currency, status, description, counterparty, category, occurred_at, receipt_path, metadata, created_at, updated_at, account:accounts(name)"
-    )
+    .select(COLUMNS)
     .eq("organization_id", organizationId)
     .order("occurred_at", { ascending: false })
     .limit(MAX_ROWS);
@@ -80,17 +82,46 @@ export const transactionsResource = createResource(async () => {
   ]);
   if (error) toast.error("Couldn't load transactions.");
   const items = ((data ?? []) as unknown as Transaction[]).map((item) => ({ ...item, amount: Number(item.amount) }));
+  // Keep a transaction open on its own page up to date after changes.
+  if (pinnedId) void loadTransaction(pinnedId);
   return { organizationId, items, accounts: (accounts as { id: string; name: string }[] | null) ?? [] };
 });
 
 export const selectedTransaction = createStore<string | null>(null);
 
+// One transaction loaded by id, for its own page. It may be outside the
+// filtered list. undefined while loading, null if it doesn't exist.
+export const pinnedTransaction = createStore<Transaction | null | undefined>(undefined);
+let pinnedId: string | null = null;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function loadTransaction(id: string) {
+  pinnedId = id;
+  if (!UUID.test(id)) {
+    pinnedTransaction.set(null);
+    return;
+  }
+  const { data } = await createClient().from("transactions").select(COLUMNS).eq("id", id).maybeSingle();
+  if (pinnedId !== id) return;
+  const row = data as unknown as Transaction | null;
+  pinnedTransaction.set(row ? { ...row, amount: Number(row.amount) } : null);
+}
+
 /** The selected transaction, or the newest if none is picked. */
 export function useSelectedTransaction() {
   const data = transactionsResource.use();
   const selectedId = selectedTransaction.use();
+  const pinned = pinnedTransaction.use();
   const items = data?.items ?? [];
-  return { data, transaction: items.find((item) => item.id === selectedId) ?? items[0] ?? null };
+  return {
+    data,
+    transaction:
+      items.find((item) => item.id === selectedId) ??
+      (pinned && pinned.id === selectedId ? pinned : null) ??
+      items[0] ??
+      null,
+  };
 }
 
 // Matches the app's colours, radius and font.
@@ -108,6 +139,7 @@ export function TransactionsLedger({ className }: { className?: string }) {
   const data = transactionsResource.use();
   const filters = filtersStore.use();
   const selectedId = selectedTransaction.use();
+  const router = useRouter();
 
   const columns = useMemo<ColDef<Transaction>[]>(
     () => [
@@ -143,6 +175,7 @@ export function TransactionsLedger({ className }: { className?: string }) {
     <Card className={className}>
       <CardHeader>
         <CardTitle>Ledger</CardTitle>
+        <CardDescription>Double-click a row to open it.</CardDescription>
       </CardHeader>
       <CardContent>
         {data === undefined ? (
@@ -162,6 +195,7 @@ export function TransactionsLedger({ className }: { className?: string }) {
               quickFilterText={filters.search}
               rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true }}
               onRowClicked={(event) => event.data && selectedTransaction.set(event.data.id)}
+              onRowDoubleClicked={(event) => event.data && router.push(`/console/transaction/${event.data.id}`)}
               onFirstDataRendered={(event) => {
                 const id = selectedId ?? data.items[0]?.id;
                 if (id) event.api.getRowNode(id)?.setSelected(true);
