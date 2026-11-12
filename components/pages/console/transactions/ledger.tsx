@@ -1,30 +1,180 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+"use client";
 
-// Transaction table. Skeleton rows stand in until AG Grid is added.
+import { useMemo } from "react";
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  themeQuartz,
+  type ColDef,
+  type ValueFormatterParams,
+} from "ag-grid-community";
+import { AgGridReact } from "ag-grid-react";
+import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient, createResource, createStore, getWorkspaceId } from "@/lib/client";
+import { formatDate, formatMoney } from "@/lib/utils";
+
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+export type TransactionStatus = "pending" | "completed" | "failed" | "refunded" | "cancelled";
+
+export type Transaction = {
+  id: string;
+  account_id: string;
+  external_id: string | null;
+  amount: number;
+  currency: string;
+  status: TransactionStatus;
+  description: string | null;
+  counterparty: string | null;
+  category: string | null;
+  occurred_at: string;
+  receipt_path: string | null;
+  metadata: { reconciled?: { at: string; reference: string | null } } | null;
+  created_at: string;
+  updated_at: string;
+  account: { name: string } | null;
+};
+
+export const STATUSES: { value: TransactionStatus | "all"; label: string }[] = [
+  { value: "all", label: "All statuses" },
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "refunded", label: "Refunded" },
+  { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+export type Filters = { search: string; status: TransactionStatus | "all"; accountId: string; days: string };
+
+export const filtersStore = createStore<Filters>({ search: "", status: "all", accountId: "all", days: "90" });
+
+// The newest transactions that match the filters (search is applied in the grid).
+const MAX_ROWS = 1000;
+
+export const transactionsResource = createResource(async () => {
+  const organizationId = await getWorkspaceId();
+  if (!organizationId) {
+    return { organizationId: null, items: [] as Transaction[], accounts: [] as { id: string; name: string }[] };
+  }
+  const filters = filtersStore.get();
+  const supabase = createClient();
+
+  let query = supabase
+    .from("transactions")
+    .select(
+      "id, account_id, external_id, amount, currency, status, description, counterparty, category, occurred_at, receipt_path, metadata, created_at, updated_at, account:accounts(name)"
+    )
+    .eq("organization_id", organizationId)
+    .order("occurred_at", { ascending: false })
+    .limit(MAX_ROWS);
+  if (filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.accountId !== "all") query = query.eq("account_id", filters.accountId);
+  if (filters.days !== "all") {
+    query = query.gte("occurred_at", new Date(Date.now() - Number(filters.days) * 86_400_000).toISOString());
+  }
+
+  const [{ data, error }, { data: accounts }] = await Promise.all([
+    query,
+    supabase.from("accounts").select("id, name").eq("organization_id", organizationId).order("name"),
+  ]);
+  if (error) toast.error("Couldn't load transactions.");
+  const items = ((data ?? []) as unknown as Transaction[]).map((item) => ({ ...item, amount: Number(item.amount) }));
+  return { organizationId, items, accounts: (accounts as { id: string; name: string }[] | null) ?? [] };
+});
+
+export const selectedTransaction = createStore<string | null>(null);
+
+/** The selected transaction, or the newest if none is picked. */
+export function useSelectedTransaction() {
+  const data = transactionsResource.use();
+  const selectedId = selectedTransaction.use();
+  const items = data?.items ?? [];
+  return { data, transaction: items.find((item) => item.id === selectedId) ?? items[0] ?? null };
+}
+
+// Matches the app's colours, radius and font.
+const gridTheme = themeQuartz.withParams({
+  accentColor: "#881337",
+  borderRadius: 5,
+  wrapperBorderRadius: 8,
+  fontFamily: "inherit",
+  fontSize: 13,
+  headerFontWeight: 500,
+});
+
+// Every transaction in a sortable, filterable grid (AG Grid Community).
 export function TransactionsLedger({ className }: { className?: string }) {
+  const data = transactionsResource.use();
+  const filters = filtersStore.use();
+  const selectedId = selectedTransaction.use();
+
+  const columns = useMemo<ColDef<Transaction>[]>(
+    () => [
+      {
+        field: "occurred_at",
+        headerName: "Date",
+        sort: "desc",
+        width: 130,
+        valueFormatter: (params: ValueFormatterParams<Transaction, string>) => formatDate(params.value),
+      },
+      { field: "description", headerName: "Description", flex: 2, minWidth: 180 },
+      { field: "counterparty", headerName: "Counterparty", flex: 1, minWidth: 140 },
+      { field: "category", headerName: "Category", width: 140, valueFormatter: (p) => p.value ?? "–" },
+      {
+        field: "status",
+        headerName: "Status",
+        width: 120,
+        valueFormatter: (p) => (p.value ? p.value.charAt(0).toUpperCase() + p.value.slice(1) : ""),
+      },
+      {
+        field: "amount",
+        headerName: "Amount",
+        type: "rightAligned",
+        width: 140,
+        valueFormatter: (p) => (p.data ? formatMoney(p.data.amount, p.data.currency) : ""),
+        cellClass: (p) => ((p.value ?? 0) < 0 ? "text-destructive tabular-nums" : "tabular-nums"),
+      },
+    ],
+    []
+  );
+
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle>Ledger</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1">
-        <div className="grid grid-cols-[1fr_2fr_1fr_1fr] gap-4 border-b pb-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-3 w-16" />
-          ))}
-        </div>
-        {Array.from({ length: 8 }).map((_, row) => (
-          <div
-            key={row}
-            className="grid grid-cols-[1fr_2fr_1fr_1fr] items-center gap-4 border-b py-3 last:border-b-0"
-          >
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-5 w-16 rounded-full" />
-            <Skeleton className="ml-auto h-4 w-16" />
+      <CardContent>
+        {data === undefined ? (
+          <p className="text-muted-foreground text-sm">Loading…</p>
+        ) : data.items.length === 0 ? (
+          <p className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
+            No transactions match. Import them from a PayPal connection, or change the filters.
+          </p>
+        ) : (
+          <div className="h-[28rem] w-full">
+            <AgGridReact<Transaction>
+              theme={gridTheme}
+              rowData={data.items}
+              columnDefs={columns}
+              defaultColDef={{ sortable: true, filter: true, resizable: true }}
+              getRowId={(params) => params.data.id}
+              quickFilterText={filters.search}
+              rowSelection={{ mode: "singleRow", checkboxes: false, enableClickSelection: true }}
+              onRowClicked={(event) => event.data && selectedTransaction.set(event.data.id)}
+              onFirstDataRendered={(event) => {
+                const id = selectedId ?? data.items[0]?.id;
+                if (id) event.api.getRowNode(id)?.setSelected(true);
+              }}
+              pagination
+              paginationPageSize={50}
+              paginationPageSizeSelector={[25, 50, 100]}
+            />
           </div>
-        ))}
+        )}
+        {data && data.items.length >= MAX_ROWS ? (
+          <p className="text-muted-foreground mt-2 text-xs">Showing the newest {MAX_ROWS}. Narrow the filters to see older ones.</p>
+        ) : null}
       </CardContent>
     </Card>
   );
