@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -32,6 +32,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(false);
   const [paypalLoading, setPaypalLoading] = useState(false);
+
+  // Next.js keeps visited pages alive (hidden) and shows them again later, so
+  // a "Signing in…" state left over from the last visit would come back stuck.
+  // Reset it whenever the page is hidden.
+  useLayoutEffect(() => {
+    return () => {
+      setLoading(false);
+      setPaypalLoading(false);
+    };
+  }, []);
 
   // Redirects to PayPal, then back through /auth/callback. Uses the
   // "custom:paypal" provider configured in Supabase Auth.

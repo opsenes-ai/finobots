@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff } from "lucide-react";
@@ -23,6 +23,15 @@ export default function ResetPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Next.js keeps visited pages alive (hidden) and shows them again later, so
+  // a "Signing in…" state left over from the last visit would come back stuck.
+  // Reset it whenever the page is hidden.
+  useLayoutEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

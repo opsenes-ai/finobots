@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { startSessionCookies } from "@/lib/auth/session";
+import { ACTIVITY_COOKIE, SESSION_COOKIE, startSessionCookies } from "@/lib/auth/session";
 
 /**
  * Starts the session policy window after a successful login.
@@ -9,4 +9,11 @@ import { startSessionCookies } from "@/lib/auth/session";
  */
 export async function startSession(remember: boolean) {
   startSessionCookies(await cookies(), remember);
+}
+
+/** Clears the session policy cookies on sign out. */
+export async function endSession() {
+  const store = await cookies();
+  store.delete(SESSION_COOKIE);
+  store.delete(ACTIVITY_COOKIE);
 }

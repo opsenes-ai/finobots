@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createClient } from "@/lib/client";
@@ -19,6 +19,15 @@ import { Label } from "@/components/ui/label";
 export default function ForgotPage() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // Next.js keeps visited pages alive (hidden) and shows them again later, so
+  // a "Signing in…" state left over from the last visit would come back stuck.
+  // Reset it whenever the page is hidden.
+  useLayoutEffect(() => {
+    return () => {
+      setLoading(false);
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

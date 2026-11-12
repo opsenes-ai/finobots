@@ -3,6 +3,8 @@
 import { Suspense, use, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/auth/profile";
+import { endSession } from "@/lib/auth/actions";
+import { createClient } from "@/lib/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -10,7 +12,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Gauge, KeyRound, LogOut, MessageSquare, Sparkles, User } from "lucide-react";
+import {
+  ArrowUpRight,
+  ChevronDown,
+  ChevronUp,
+  Gauge,
+  KeyRound,
+  LogOut,
+  MessageSquare,
+  Sparkles,
+  User,
+} from "lucide-react";
 
 const FALLBACK_NAME = "Profile";
 const FEEDBACK_URL = "https://tally.so/r/1WdJ6g";
@@ -86,6 +98,22 @@ export function ProfileBar({
   // Controlled so picking an item closes the popup. Clicking outside or
   // clicking the profile row again also closes it.
   const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  // Ends the Supabase session and the session policy cookies, then loads the
+  // login page fresh. A full page load (not router.push) clears every page
+  // the app kept in memory, so the next person to sign in starts clean.
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      await createClient().auth.signOut({ scope: "local" });
+      await endSession();
+    } finally {
+      // A full load on purpose: router.push would keep the old pages in memory.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/auth/login");
+    }
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -102,6 +130,13 @@ export function ProfileBar({
             collapsed={collapsed}
           />
         </Suspense>
+        {/* Up while closed (the menu opens upward), down while it's open. */}
+        {!collapsed &&
+          (open ? (
+            <ChevronDown aria-hidden className="ml-auto size-4 shrink-0" />
+          ) : (
+            <ChevronUp aria-hidden className="ml-auto size-4 shrink-0" />
+          ))}
       </PopoverTrigger>
       {/* Opens upward, since the trigger sits at the bottom of the sidebar. */}
       {/* Centred over the sidebar with equal space on both sides: the width is
@@ -169,18 +204,17 @@ export function ProfileBar({
           <MessageSquare className="size-4" />
           Feedback
           <span className="sr-only">(opens in a new tab)</span>
+          <ArrowUpRight aria-hidden className="ml-auto size-4 text-muted-foreground" />
         </a>
         <div role="separator" aria-orientation="horizontal" className="-mx-1.5 my-1 h-px bg-border" />
         <button
           type="button"
-          onClick={() => {
-            setOpen(false);
-            router.push("/auth/login");
-          }}
-          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive outline-none transition-colors hover:bg-destructive/10"
+          disabled={signingOut}
+          onClick={signOut}
+          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-destructive disabled:opacity-60 outline-none transition-colors hover:bg-destructive/10"
         >
           <LogOut className="size-4" />
-          Sign out
+          {signingOut ? "Signing out…" : "Sign out"}
         </button>
       </PopoverContent>
     </Popover>
