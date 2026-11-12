@@ -54,7 +54,7 @@ representing the community in public spaces.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to **conduct@finobots.com**. All complaints will be reviewed and
+reported to **hrudu.shibu@opsenes.in**. All complaints will be reviewed and
 investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the

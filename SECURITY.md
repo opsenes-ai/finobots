@@ -10,7 +10,7 @@
 ## Reporting a vulnerability
 
 1. **Don't** open a public GitHub issue.
-2. Email **security@finobots.com** with a description, steps to reproduce and the potential impact.
+2. Email **hrudu.shibu@opsenes.in** with a description, steps to reproduce and the potential impact.
 3. Include any relevant code, screenshots or proof of concept.
 
 ### Response timeline
@@ -79,6 +79,6 @@
 
 - Never commit secrets, API keys, passwords or tokens. `.env.local` and `supabase/.env` are gitignored.
 - Put function secrets in Supabase with `npx supabase secrets set`, not in code.
-- If you commit a secret by mistake, rotate it straight away and email **security@finobots.com**.
+- If you commit a secret by mistake, rotate it straight away and email **hrudu.shibu@opsenes.in**.
 - Keep row level security on for every new table, and add policies before exposing it to the app.
 - Validate all input in edge functions, and use the user's client (not the service role) unless the task truly needs it.

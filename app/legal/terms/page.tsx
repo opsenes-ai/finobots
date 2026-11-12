@@ -274,7 +274,7 @@ export default function TermsPage() {
       <h2>19. Contact</h2>
       <p>
         If you have any questions about these Terms, please contact us at{" "}
-        <a href="mailto:legal@finobots.com">legal@finobots.com</a>.
+        <a href="mailto:hrudu.shibu@opsenes.in">hrudu.shibu@opsenes.in</a>.
       </p>
     </>
   );

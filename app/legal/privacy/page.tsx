@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         Finobots is the data controller responsible for your personal
         information collected through the Service. If you have questions about
         how we handle your data, you can contact us at{" "}
-        <a href="mailto:legal@finobots.com">legal@finobots.com</a>.
+        <a href="mailto:hrudu.shibu@opsenes.in">hrudu.shibu@opsenes.in</a>.
       </p>
 
       <h2>3. Information We Collect</h2>
@@ -249,7 +249,7 @@ export default function PrivacyPage() {
       </ul>
       <p>
         To exercise any of these rights, contact us at{" "}
-        <a href="mailto:legal@finobots.com">legal@finobots.com</a>. We will
+        <a href="mailto:hrudu.shibu@opsenes.in">hrudu.shibu@opsenes.in</a>. We will
         respond to your request within the timeframe required by applicable law.
         We may need to verify your identity before processing your request.
       </p>
@@ -287,7 +287,7 @@ export default function PrivacyPage() {
       <p>
         If you have questions, concerns, or requests regarding this Privacy
         Policy or our handling of your personal information, please contact us
-        at <a href="mailto:legal@finobots.com">legal@finobots.com</a>.
+        at <a href="mailto:hrudu.shibu@opsenes.in">hrudu.shibu@opsenes.in</a>.
       </p>
     </>
   );

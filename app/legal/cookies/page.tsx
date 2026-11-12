@@ -200,7 +200,7 @@ export default function CookiesPage() {
       <p>
         If you have questions about this Cookie Policy or our use of cookies,
         please contact us at{" "}
-        <a href="mailto:legal@finobots.com">legal@finobots.com</a>.
+        <a href="mailto:hrudu.shibu@opsenes.in">hrudu.shibu@opsenes.in</a>.
       </p>
     </>
   );
