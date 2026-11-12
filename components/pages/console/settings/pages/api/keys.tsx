@@ -8,6 +8,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient, functionErrorMessage, getWorkspaceId } from "@/lib/client";
+import type { ColDef } from "ag-grid-community";
+import { DataGrid } from "@/components/shared/console/data-grid";
+import { formatDate } from "@/lib/utils";
 import { API_SCOPES } from "./scopes";
 
 type ApiKey = {
@@ -85,6 +88,34 @@ export function ApiKeys() {
     setKeys((current) => current?.filter((key) => key.id !== id) ?? null);
     toast.success("Key revoked.");
   }
+
+  const columns: ColDef<ApiKey>[] = [
+    { field: "name", headerName: "Name", flex: 1, minWidth: 150 },
+    { field: "prefix", headerName: "Key", width: 110, valueFormatter: (p) => `${p.value}…`, cellClass: "font-mono" },
+    { field: "scopes", headerName: "Scopes", flex: 1, minWidth: 160, valueFormatter: (p) => (p.value ?? []).join(", ") },
+    { field: "created_at", headerName: "Created", width: 130, valueFormatter: (p) => formatDate(p.value) },
+    {
+      field: "last_used_at",
+      headerName: "Last used",
+      width: 130,
+      sort: "desc",
+      valueFormatter: (p) => (p.value ? formatDate(p.value) : "Never"),
+    },
+    {
+      headerName: "",
+      colId: "actions",
+      width: 110,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      cellRenderer: (p: { data?: ApiKey }) =>
+        p.data ? (
+          <Button variant="destructive" size="xs" disabled={busy} onClick={() => revoke(p.data!.id)}>
+            Revoke
+          </Button>
+        ) : null,
+    },
+  ];
 
   async function copy() {
     if (!newKey) return;
@@ -178,24 +209,13 @@ export function ApiKeys() {
           No keys yet.
         </p>
       ) : (
-        <ul className="divide-y rounded-lg border">
-          {keys.map((key) => (
-            <li key={key.id} className="flex items-center justify-between gap-4 p-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{key.name}</p>
-                <p className="text-muted-foreground truncate text-xs">
-                  <code>{key.prefix}…</code> · {key.scopes.length} scope{key.scopes.length === 1 ? "" : "s"} ·{" "}
-                  {key.last_used_at
-                    ? `Used ${new Date(key.last_used_at).toLocaleDateString()}`
-                    : "Never used"}
-                </p>
-              </div>
-              <Button variant="destructive" size="sm" disabled={busy} onClick={() => revoke(key.id)}>
-                Revoke
-              </Button>
-            </li>
-          ))}
-        </ul>
+        <DataGrid<ApiKey>
+          rows={keys}
+          columns={columns}
+          getRowId={(row) => row.id}
+          heightClass="h-64"
+          pageSize={10}
+        />
       )}
     </section>
   );

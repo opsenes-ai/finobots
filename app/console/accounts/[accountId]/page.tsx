@@ -2,19 +2,20 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { ColDef } from "ag-grid-community";
+import { DataGrid } from "@/components/shared/console/data-grid";
 import {
   AccountDetails,
   AccountEditing,
 } from "@/components/pages/console/accounts";
 import { accountsResource, selectedAccount } from "@/components/pages/console/accounts/listing";
 import { createClient } from "@/lib/client";
-import { cn, formatDate, formatMoney } from "@/lib/utils";
+import { formatDate, formatMoney } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -27,12 +28,34 @@ type Row = {
   currency: string;
 };
 
-const RECENT_LIMIT = 50;
+const RECENT_LIMIT = 200;
+
+const columns: ColDef<Row>[] = [
+  { field: "occurred_at", headerName: "Date", sort: "desc", width: 130, valueFormatter: (p) => formatDate(p.value) },
+  { field: "description", headerName: "Description", flex: 2, minWidth: 170, valueFormatter: (p) => p.value ?? "No description" },
+  { field: "counterparty", headerName: "Counterparty", flex: 1, minWidth: 140, valueFormatter: (p) => p.value ?? "–" },
+  { field: "category", headerName: "Category", width: 140, valueFormatter: (p) => p.value ?? "–" },
+  {
+    field: "status",
+    headerName: "Status",
+    width: 120,
+    valueFormatter: (p) => (p.value ? p.value.charAt(0).toUpperCase() + p.value.slice(1) : ""),
+  },
+  {
+    field: "amount",
+    headerName: "Amount",
+    type: "rightAligned",
+    width: 140,
+    valueFormatter: (p) => (p.data ? formatMoney(p.data.amount, p.data.currency) : ""),
+    cellClass: (p) => ((p.value ?? 0) < 0 ? "text-destructive tabular-nums" : "tabular-nums"),
+  },
+];
 
 // The newest transactions on one account, each linking to its own page.
 function AccountTransactions({ accountId }: { accountId: string }) {
   const [rows, setRows] = useState<Row[] | null>(null);
   const accounts = accountsResource.use();
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
@@ -61,44 +84,13 @@ function AccountTransactions({ accountId }: { accountId: string }) {
             No transactions on this account yet.
           </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="whitespace-nowrap">{formatDate(row.occurred_at)}</TableCell>
-                  <TableCell className="max-w-64">
-                    <Link
-                      href={`/console/transaction/${row.id}`}
-                      className="block truncate font-medium underline-offset-4 hover:underline"
-                    >
-                      {row.description ?? "No description"}
-                    </Link>
-                    {row.counterparty ? (
-                      <span className="text-muted-foreground block truncate text-xs">{row.counterparty}</span>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{row.category ?? "–"}</TableCell>
-                  <TableCell>
-                    <Badge variant={row.status === "completed" ? "secondary" : "outline"}>
-                      {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className={cn("text-right tabular-nums", row.amount < 0 && "text-destructive")}>
-                    {formatMoney(row.amount, row.currency)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataGrid<Row>
+            rows={rows}
+            columns={columns}
+            getRowId={(row) => row.id}
+            heightClass="h-[26rem]"
+            onRowClick={(row) => router.push(`/console/transaction/${row.id}`)}
+          />
         )}
         {rows && rows.length >= RECENT_LIMIT ? (
           <p className="text-muted-foreground mt-2 text-xs">

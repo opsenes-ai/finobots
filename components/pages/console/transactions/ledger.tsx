@@ -2,20 +2,13 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  themeQuartz,
-  type ColDef,
-  type ValueFormatterParams,
-} from "ag-grid-community";
+import { type ColDef, type ValueFormatterParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { gridTheme } from "@/components/shared/console/data-grid";
 import { createClient, createResource, createStore, getWorkspaceId } from "@/lib/client";
 import { formatDate, formatMoney } from "@/lib/utils";
-
-ModuleRegistry.registerModules([AllCommunityModule]);
 
 export type TransactionStatus = "pending" | "completed" | "failed" | "refunded" | "cancelled";
 
@@ -123,16 +116,6 @@ export function useSelectedTransaction() {
       null,
   };
 }
-
-// Matches the app's colours, radius and font.
-const gridTheme = themeQuartz.withParams({
-  accentColor: "#881337",
-  borderRadius: 5,
-  wrapperBorderRadius: 8,
-  fontFamily: "inherit",
-  fontSize: 13,
-  headerFontWeight: 500,
-});
 
 // Every transaction in a sortable, filterable grid (AG Grid Community).
 export function TransactionsLedger({ className }: { className?: string }) {

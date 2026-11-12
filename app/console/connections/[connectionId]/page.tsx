@@ -3,11 +3,12 @@
 import { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import type { ColDef } from "ag-grid-community";
+import { DataGrid } from "@/components/shared/console/data-grid";
 import { ConnectionDetails } from "@/components/pages/console/connections";
 import {
   connectionsResource,
@@ -27,10 +28,24 @@ type Activity = {
   account_id: string;
 };
 
+const activityColumns: ColDef<Activity>[] = [
+  { field: "occurred_at", headerName: "Date", sort: "desc", width: 130, valueFormatter: (p) => formatDate(p.value) },
+  { field: "description", headerName: "Description", flex: 1, minWidth: 170, valueFormatter: (p) => p.value ?? "No description" },
+  {
+    field: "amount",
+    headerName: "Amount",
+    type: "rightAligned",
+    width: 140,
+    valueFormatter: (p) => (p.data ? formatMoney(p.data.amount, p.data.currency) : ""),
+    cellClass: (p) => ((p.value ?? 0) < 0 ? "text-destructive tabular-nums" : "tabular-nums"),
+  },
+];
+
 // The accounts this connection keeps in sync, and their latest activity.
 function ConnectionData({ connectionId, refreshKey }: { connectionId: string; refreshKey: unknown }) {
   const [accounts, setAccounts] = useState<LinkedAccount[] | null>(null);
   const [activity, setActivity] = useState<Activity[] | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     async function load() {
@@ -55,7 +70,7 @@ function ConnectionData({ connectionId, refreshKey }: { connectionId: string; re
           list.map((item) => item.id)
         )
         .order("occurred_at", { ascending: false })
-        .limit(10);
+        .limit(100);
       setActivity(((rows ?? []) as Activity[]).map((row) => ({ ...row, amount: Number(row.amount) })));
     }
     void load();
@@ -108,33 +123,14 @@ function ConnectionData({ connectionId, refreshKey }: { connectionId: string; re
           ) : activity.length === 0 ? (
             <p className="text-muted-foreground text-sm">No transactions yet. Import them from Details.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activity.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="whitespace-nowrap">{formatDate(row.occurred_at)}</TableCell>
-                    <TableCell className="max-w-64">
-                      <Link
-                        href={`/console/transaction/${row.id}`}
-                        className="block truncate underline-offset-4 hover:underline"
-                      >
-                        {row.description ?? "No description"}
-                      </Link>
-                    </TableCell>
-                    <TableCell className={cn("text-right tabular-nums", row.amount < 0 && "text-destructive")}>
-                      {formatMoney(row.amount, row.currency)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataGrid<Activity>
+              rows={activity}
+              columns={activityColumns}
+              getRowId={(row) => row.id}
+              heightClass="h-80"
+              pageSize={10}
+              onRowClick={(row) => router.push(`/console/transaction/${row.id}`)}
+            />
           )}
         </CardContent>
       </Card>

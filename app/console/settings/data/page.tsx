@@ -1,6 +1,7 @@
 import {
   DataExports,
   DataImports,
+  DataJobs,
   DataRetention,
 } from "@/components/pages/console/settings/pages/data";
 
@@ -10,6 +11,7 @@ export default function DataSettingsPage() {
       <h1 className="text-2xl font-semibold">Data</h1>
       <DataImports />
       <DataExports />
+      <DataJobs />
       <DataRetention />
     </div>
   );
