@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Chat } from "@/components/pages/console/chat/ui/chat";
@@ -288,6 +289,24 @@ function ChatSession() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Downloads the conversation as a Markdown file.
+  function exportChat() {
+    const lines = messages
+      .filter((message) => !errorIds.current.has(message.id))
+      .map((message) => {
+        const who = message.role === "user" ? "You" : "Finobots";
+        const when = message.createdAt ? message.createdAt.toLocaleString() : "";
+        return `### ${who}${when ? ` · ${when}` : ""}\n\n${message.content}\n`;
+      });
+    const blob = new Blob([`# Finobots chat\n\n${lines.join("\n")}`], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `finobots-chat-${new Date().toISOString().slice(0, 10)}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function decide(id: string, decision: "approve" | "reject") {
     setDeciding(id);
     const { error } = await createClient().functions.invoke("actions", {
@@ -307,8 +326,14 @@ function ChatSession() {
     // message list scrolls with its scrollbar at the right edge of the screen
     // and the input stays at the bottom. The chat adds its own padding.
     <div className="-m-6 flex h-svh flex-col">
-      {proposals.length > 0 ? (
-        <div className="mx-auto w-full max-w-3xl px-6 pt-6">
+      {messages.length > 0 || proposals.length > 0 ? (
+        <div className="mx-auto w-full max-w-3xl space-y-3 px-6 pt-4">
+          <div className="flex justify-end">
+            <Button variant="ghost" size="sm" disabled={generating || messages.length === 0} onClick={exportChat}>
+              <Download />
+              Export
+            </Button>
+          </div>
           <ProposedActions items={proposals} busyId={deciding} onDecide={decide} />
         </div>
       ) : null}

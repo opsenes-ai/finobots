@@ -3,10 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { MessageInput } from "@/components/pages/console/chat/ui/message-input";
 
 // Read by /console/chat/[chatId] to show the first message.
 const PENDING_MESSAGE_KEY = "finobots:pending-message";
+
+// Starting points that use the assistant's look-ups.
+const PRESETS = [
+  "List my accounts",
+  "Show this month's transactions",
+  "Summarise cash flow by category",
+  "Forecast my USD balance",
+  "What's waiting for approval?",
+];
 
 // Kept outside the component so render stays pure.
 function createChatId() {
@@ -31,13 +41,17 @@ export default function NewChatPage() {
     window.history.replaceState(null, "", url);
   }, []);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const text = input.trim();
+  // Opens a new chat that sends this as its first message.
+  const start = (value: string) => {
+    const text = value.trim();
     if (!text) return;
-
     sessionStorage.setItem(PENDING_MESSAGE_KEY, text);
     router.push(`/console/chat/${createChatId()}`);
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    start(input);
   };
 
   return (
@@ -55,6 +69,15 @@ export default function NewChatPage() {
             isGenerating={false}
           />
         </form>
+        <ul className="flex flex-wrap justify-center gap-2" aria-label="Suggested questions">
+          {PRESETS.map((preset) => (
+            <li key={preset}>
+              <Button type="button" variant="outline" size="sm" onClick={() => start(preset)}>
+                {preset}
+              </Button>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

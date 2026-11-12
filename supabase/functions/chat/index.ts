@@ -50,14 +50,23 @@ const SYSTEM_PROMPT = `You are Finobots, a financial operations assistant for sm
 Help with invoices, payments, expenses, reconciliation, and cash flow. Be concise and clear.
 
 You can look up the workspace's real data with tools:
-- get_accounts for balances and accounts
-- search_transactions for payments, sales, expenses, fees, refunds, customers and categories
-- get_cashflow for money in, money out, net, monthly trends and top categories
-- get_connections for connected providers and sync status
-- get_approvals for actions you've proposed and their status
+- get_accounts to list accounts and balances; get_account_details for one account in depth
+- search_transactions to find and total transactions; get_transaction for one in full
+- get_cashflow for money in, out and net, grouped by month, week, category, counterparty or account
+- get_forecast to project a currency's balance forward
+- get_connections for connected providers; get_approvals for actions you've proposed
 When a question is about the user's finances, call the relevant tool first and answer from
-its results. Quote amounts with their currency and never add different currencies together.
-If the data doesn't answer the question, say so. Never invent figures.
+its results. When the user refers to an item from an earlier list ("the second account",
+"that payment"), use its id from the earlier tool result. Quote amounts with their currency
+and never add different currencies together. If the data doesn't answer the question, say
+so. Never invent figures.
+
+Formatting:
+- Keep replies compact. Use short bullet points, one line per item, for example:
+  "- 12 Nov · Photography shoot · Bluebird Bakery · +$1,187.20 · Completed"
+- Don't use tables. List at most 10 items, then say how many more there are and offer to
+  narrow it down (by date, account, category or counterparty).
+- Lead with the answer or the total, then the detail.
 
 Never say an action has been done. To send an invoice or a payment reminder, call
 propose_action. The user reviews and approves it before anything happens.`;
@@ -163,8 +172,8 @@ async function buildSystemPrompt(client: SupabaseClient, organizationId: string)
   return parts.join("\n\n");
 }
 
-// Short replies for now on the built-in model.
-const PLATFORM_MAX_TOKENS = 512;
+// Room for a compact list on the built-in model, without long essays.
+const PLATFORM_MAX_TOKENS = 1024;
 
 // Stops the request if the built-in model is out of credits, or if the
 // workspace's own daily, weekly or monthly spending limit has been reached.
@@ -406,6 +415,7 @@ Deno.serve(async (req) => {
             const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
             let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
             let roundText = "";
+            let cutShort = false;
             const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
             let buffer = "";
 
@@ -425,6 +435,7 @@ Deno.serve(async (req) => {
                 let chunk: {
                   usage?: { prompt_tokens?: number; completion_tokens?: number };
                   choices?: {
+                    finish_reason?: string | null;
                     delta?: {
                       content?: string;
                       tool_calls?: {
@@ -442,6 +453,7 @@ Deno.serve(async (req) => {
                 }
 
                 const delta = chunk.choices?.[0]?.delta;
+                if (chunk.choices?.[0]?.finish_reason === "length") cutShort = true;
                 if (chunk.usage) usage = chunk.usage;
                 if (delta?.content) {
                   // Separate this round's text from the previous round's.
@@ -468,7 +480,11 @@ Deno.serve(async (req) => {
             inputTokens += usage?.prompt_tokens ?? Math.ceil(JSON.stringify(conversation).length / 4);
             outputTokens += usage?.completion_tokens ?? Math.ceil((roundText.length + argumentChars) / 4);
 
-            if (toolCalls.size === 0) break;
+            if (toolCalls.size === 0) {
+              // The reply hit the length cap: say so, rather than ending mid-sentence.
+              if (cutShort) send({ type: "text", delta: "\n\n_That was cut short. Ask for fewer items, or narrow it down._" });
+              break;
+            }
 
             const calls: ToolCall[] = [...toolCalls.values()].map((call, i) => ({
               id: call.id || `call_${round}_${i}`,
