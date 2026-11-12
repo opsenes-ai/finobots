@@ -22,6 +22,8 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2.119.0";
 import {
   type AiProviderName,
   type AiTarget,
+  creditsFromUsd,
+  estimateCostUsd,
   platformTarget,
   providerTarget,
 } from "../_shared/ai.ts";
@@ -137,7 +139,96 @@ async function buildSystemPrompt(client: SupabaseClient, organizationId: string)
   return parts.join("\n\n");
 }
 
-const PLATFORM_MAX_TOKENS = 1024;
+// Short replies for now on the built-in model.
+const PLATFORM_MAX_TOKENS = 512;
+
+// Stops the request if the built-in model is out of credits, or if the
+// workspace's own daily, weekly or monthly spending limit has been reached.
+async function enforceLimits(
+  client: SupabaseClient,
+  userId: string,
+  organizationId: string,
+  target: AiTarget,
+): Promise<void> {
+  if (!target.ownKey) {
+    const { data, error } = await createAdminClient().rpc("ai_credit_balance", { p_user: userId });
+    if (error) throw error;
+    if (Number(data) <= 0) {
+      throw new HttpError(
+        429,
+        "You're out of credits. 5 credits are added every day, or you can connect your own key.",
+        "out_of_credits",
+      );
+    }
+  }
+
+  const { data: settings, error: limitError } = await client
+    .from("agent_settings")
+    .select("daily_limit_usd, weekly_limit_usd, monthly_limit_usd")
+    .eq("organization_id", organizationId)
+    .maybeSingle<{
+      daily_limit_usd: number | null;
+      weekly_limit_usd: number | null;
+      monthly_limit_usd: number | null;
+    }>();
+  if (limitError) throw limitError;
+  if (!settings) return;
+
+  const periods = [
+    { label: "daily", limit: settings.daily_limit_usd, key: "day", resets: "midnight UTC" },
+    { label: "weekly", limit: settings.weekly_limit_usd, key: "week", resets: "Monday, midnight UTC" },
+    { label: "monthly", limit: settings.monthly_limit_usd, key: "month", resets: "the 1st, midnight UTC" },
+  ] as const;
+  if (periods.every((period) => period.limit === null)) return;
+
+  const { data: spend, error: spendError } = await client
+    .rpc("ai_spend", { p_org: organizationId })
+    .single<{ day: number; week: number; month: number }>();
+  if (spendError) throw spendError;
+
+  for (const period of periods) {
+    if (period.limit !== null && Number(spend[period.key]) >= Number(period.limit)) {
+      throw new HttpError(
+        429,
+        `You've reached your ${period.label} spending limit. It resets ${period.resets}.`,
+        "limit_reached",
+      );
+    }
+  }
+}
+
+// Saves one usage row and, for the built-in model, takes the credits.
+async function recordUsage(input: {
+  userId: string;
+  organizationId: string;
+  target: AiTarget;
+  inputTokens: number;
+  outputTokens: number;
+}): Promise<void> {
+  const admin = createAdminClient();
+  const costUsd = estimateCostUsd(input.target.model, input.inputTokens, input.outputTokens);
+  const credits = input.target.ownKey ? 0 : creditsFromUsd(costUsd);
+
+  const { error } = await admin.from("ai_usage").insert({
+    organization_id: input.organizationId,
+    user_id: input.userId,
+    provider: input.target.provider,
+    model: input.target.model,
+    input_tokens: input.inputTokens,
+    output_tokens: input.outputTokens,
+    credits: Number(credits.toFixed(4)),
+    cost_usd: Number(costUsd.toFixed(6)),
+  });
+  if (error) throw error;
+
+  if (credits > 0) {
+    const { error: chargeError } = await admin.rpc("ai_charge_credits", {
+      p_user: input.userId,
+      p_amount: credits,
+    });
+    if (chargeError) throw chargeError;
+  }
+}
 const PLATFORM_HISTORY_LIMIT = 20;
 
 // The workspace's active provider key if it has one, else the platform default.
@@ -193,6 +284,7 @@ Deno.serve(async (req) => {
     }
 
     const target = await resolveTarget(auth.client, organizationId);
+    await enforceLimits(auth.client, auth.userId, organizationId, target);
     const systemPrompt = await buildSystemPrompt(auth.client, organizationId);
 
     // The platform's own key keeps replies short and history small to limit
@@ -227,6 +319,8 @@ Deno.serve(async (req) => {
         const send = (event: Record<string, unknown>) =>
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
         const toolCalls = new Map<number, { name: string; arguments: string }>();
+        let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+        let outputChars = 0;
         const reader = source.pipeThrough(new TextDecoderStream()).getReader();
         let buffer = "";
 
@@ -245,6 +339,7 @@ Deno.serve(async (req) => {
               if (!payload || payload === "[DONE]") continue;
 
               let chunk: {
+                usage?: { prompt_tokens?: number; completion_tokens?: number };
                 choices?: {
                   delta?: {
                     content?: string;
@@ -262,7 +357,11 @@ Deno.serve(async (req) => {
               }
 
               const delta = chunk.choices?.[0]?.delta;
-              if (delta?.content) send({ type: "text", delta: delta.content });
+              if (chunk.usage) usage = chunk.usage;
+              if (delta?.content) {
+                outputChars += delta.content.length;
+                send({ type: "text", delta: delta.content });
+              }
 
               // Tool calls arrive in pieces; collect them until the end.
               for (const call of delta?.tool_calls ?? []) {
@@ -323,6 +422,23 @@ Deno.serve(async (req) => {
           console.error("AI stream failed", streamError);
           send({ type: "error", message: "The response was interrupted." });
         } finally {
+          // Use the provider's token counts when it sends them, else estimate
+          // at about four characters a token.
+          try {
+            await recordUsage({
+              userId: auth.userId,
+              organizationId,
+              target,
+              inputTokens:
+                usage?.prompt_tokens ??
+                Math.ceil(
+                  (systemPrompt.length + history.reduce((n, m) => n + m.content.length, 0)) / 4,
+                ),
+              outputTokens: usage?.completion_tokens ?? Math.ceil(outputChars / 4),
+            });
+          } catch (usageError) {
+            console.error("Recording usage failed", usageError);
+          }
           send({ type: "done" });
           controller.close();
         }

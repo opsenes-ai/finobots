@@ -56,6 +56,31 @@ export function providerTarget(
   };
 }
 
+// Prices are USD per million tokens: [input, output]. Checked against public
+// price lists in November 2026; update when providers change them.
+const PRICES: Record<string, [number, number]> = {
+  "claude-haiku-5-5": [0.1, 0.5],
+  "gpt-5.4-nano": [0.2, 1.25],
+  "gemini-3.8-flash": [0.75, 3.75],
+};
+
+// Models not listed above are costed at this rate, so limits err on the cautious side.
+const FALLBACK_PRICE: [number, number] = [1, 5];
+
+/** An estimate of what a reply cost, in USD. */
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const [input, output] = PRICES[model] ?? FALLBACK_PRICE;
+  return (inputTokens * input + outputTokens * output) / 1_000_000;
+}
+
+// Credits cover the built-in model only. 100 credits is an internal budget of
+// 5 USD, so one credit is 0.05 USD.
+const CREDIT_USD = 0.05;
+
+export function creditsFromUsd(usd: number): number {
+  return usd / CREDIT_USD;
+}
+
 /** Sends a tiny request. Returns true if the provider accepts the key and model. */
 export async function testTarget(target: AiTarget): Promise<boolean> {
   try {
