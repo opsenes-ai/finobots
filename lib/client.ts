@@ -98,5 +98,6 @@ export async function callFunction<T>(
 ): Promise<{ data: T | null; error: string | null }> {
   const { data, error } = await createClient().functions.invoke(name, { body })
   if (error) return { data: null, error: await functionErrorMessage(error) }
-  return { data: data as T, error: null }
+  // Functions reply with { data: ... }.
+  return { data: ((data as { data?: T } | null)?.data ?? null) as T | null, error: null }
 }

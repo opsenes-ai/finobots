@@ -64,7 +64,8 @@ export function DataImports() {
       toast.error(await functionErrorMessage(error));
       return;
     }
-    const count = (data as { imported?: number } | null)?.imported;
+    // Functions reply with { data: ... }.
+    const count = (data as { data?: { imported?: number } } | null)?.data?.imported;
     toast.success(typeof count === "number" ? `Imported ${count} transactions.` : "Import finished.");
   }
 

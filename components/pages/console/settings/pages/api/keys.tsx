@@ -64,7 +64,8 @@ export function ApiKeys() {
       toast.error(await functionErrorMessage(error));
       return;
     }
-    setNewKey((data as { key: string }).key);
+    // Functions reply with { data: ... }.
+    setNewKey((data as { data: { key: string } }).data.key);
     setCreating(false);
     setName("");
     await load();
