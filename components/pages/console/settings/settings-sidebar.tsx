@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, Database, KeyRound, Shield, User } from "lucide-react";
+import { Bell, Database, Gauge, KeyRound, Shield, Sparkles, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const settingsItems = [
   { href: "/console/settings/profile", label: "Profile", icon: User },
+  { href: "/console/settings/personalization", label: "Personalization", icon: Sparkles },
+  { href: "/console/settings/usage", label: "Usage", icon: Gauge },
   { href: "/console/settings/data", label: "Data", icon: Database },
   { href: "/console/settings/security", label: "Security", icon: Shield },
   { href: "/console/settings/notifications", label: "Notifications", icon: Bell },
