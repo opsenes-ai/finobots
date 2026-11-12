@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/client";
 import { cn } from "@/lib/utils";
 
@@ -112,8 +111,7 @@ export function PersonalisationModels() {
     return (
       <section className="space-y-3">
         <h3 className="text-sm font-medium">Models</h3>
-        <Skeleton className="h-16 w-full" />
-        <Skeleton className="h-16 w-full" />
+        <p className="text-muted-foreground text-sm">Loading…</p>
       </section>
     );
   }
