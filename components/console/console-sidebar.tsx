@@ -37,7 +37,7 @@ export function ConsoleSidebar({
 
   return (
     <aside
-      className={`flex flex-col border-r transition-all ${
+      className={`flex h-full shrink-0 flex-col overflow-y-auto border-r transition-all ${
         collapsed ? "w-16" : "w-64"
       }`}
     >

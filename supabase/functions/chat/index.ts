@@ -9,12 +9,17 @@
 //                                               agent_actions. Nothing runs until
 //                                               the user approves it through the
 //                                               actions function with action_id.
+//   { type: "tool", name }                     the assistant is looking up data
 //   { type: "error", message }  then  { type: "done" }
+//
+// The assistant can call read-only tools (see tools.ts) to look up accounts,
+// transactions, cash flow, connections and approvals, as the user, up to
+// MAX_ROUNDS times before it answers.
 //
 // Uses the workspace's own provider key when one is active (see ai-providers),
 // otherwise the platform default. Both go through an OpenAI-compatible chat
 // completions API. Platform secrets: AI_API_KEY, AI_MODEL, AI_BASE_URL.
-// The conversation comes from the request; messages aren't stored yet.
+// The conversation comes from the request (the app stores the messages).
 // Proposed actions are stored, with chat_id when one is given.
 
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2.119.0";
@@ -31,6 +36,7 @@ import { requireOrgMember, requireUser } from "../_shared/auth.ts";
 import { corsHeaders, handleCors } from "../_shared/cors.ts";
 import { createAdminClient, loadAiKey } from "../_shared/database.ts";
 import { errorResponse, HttpError } from "../_shared/response.ts";
+import { READ_TOOL_NAMES, READ_TOOLS, runReadTool } from "./tools.ts";
 import {
   optionalUuid,
   readJson,
@@ -42,11 +48,21 @@ import {
 
 const SYSTEM_PROMPT = `You are Finobots, a financial operations assistant for small businesses.
 Help with invoices, payments, expenses, reconciliation, and cash flow. Be concise and clear.
-You only know the financial details the user shares in this conversation; don't invent figures.
+
+You can look up the workspace's real data with tools:
+- get_accounts for balances and accounts
+- search_transactions for payments, sales, expenses, fees, refunds, customers and categories
+- get_cashflow for money in, money out, net, monthly trends and top categories
+- get_connections for connected providers and sync status
+- get_approvals for actions you've proposed and their status
+When a question is about the user's finances, call the relevant tool first and answer from
+its results. Quote amounts with their currency and never add different currencies together.
+If the data doesn't answer the question, say so. Never invent figures.
+
 Never say an action has been done. To send an invoice or a payment reminder, call
 propose_action. The user reviews and approves it before anything happens.`;
 
-const TOOLS = [
+const ACTION_TOOLS = [
   {
     type: "function",
     function: {
@@ -66,6 +82,13 @@ const TOOLS = [
     },
   },
 ];
+
+const TOOLS = [...READ_TOOLS, ...ACTION_TOOLS];
+
+// Look-ups the model can make before it answers, so a reply can't loop forever.
+const MAX_ROUNDS = 5;
+// Tool results are capped so one lookup can't fill the context.
+const MAX_TOOL_RESULT_CHARS = 12_000;
 
 type ProposableType = "send_invoice" | "send_reminder";
 const PROPOSABLE = new Set<string>(["send_invoice", "send_reminder"]);
@@ -125,6 +148,7 @@ async function buildSystemPrompt(client: SupabaseClient, organizationId: string)
 
   const parts = [
     SYSTEM_PROMPT,
+    `Today is ${new Date().toISOString().slice(0, 10)} (UTC).`,
     TONES[settings?.response_tone ?? "professional"] ?? TONES.professional,
     LENGTHS[settings?.response_length ?? "balanced"] ?? LENGTHS.balanced,
   ];
@@ -291,151 +315,214 @@ Deno.serve(async (req) => {
     // cost. A workspace using its own key isn't capped here.
     const history = target.ownKey ? messages : messages.slice(-PLATFORM_HISTORY_LIMIT);
 
-    const upstream = await fetch(`${target.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${target.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: target.model,
-        stream: true,
-        ...(target.ownKey ? {} : { max_tokens: PLATFORM_MAX_TOKENS }),
-        tools: TOOLS,
-        messages: [{ role: "system", content: systemPrompt }, ...history],
-      }),
-    });
+    // The conversation grows within this request as tools are called and answered.
+    type ToolCall = { id: string; type: "function"; function: { name: string; arguments: string } };
+    type Turn =
+      | { role: "system" | "user"; content: string }
+      | { role: "assistant"; content: string | null; tool_calls?: ToolCall[] }
+      | { role: "tool"; tool_call_id: string; content: string };
+    const conversation: Turn[] = [{ role: "system", content: systemPrompt }, ...history];
 
-    if (!upstream.ok || !upstream.body) {
-      console.error("AI request failed", upstream.status, await upstream.text());
+    const callModel = () =>
+      fetch(`${target.baseUrl}/chat/completions`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${target.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: target.model,
+          stream: true,
+          ...(target.ownKey ? {} : { max_tokens: PLATFORM_MAX_TOKENS }),
+          tools: TOOLS,
+          messages: conversation,
+        }),
+      });
+
+    // The first call is made before streaming starts, so a provider failure
+    // can still be reported with a proper status code.
+    const first = await callModel();
+    if (!first.ok || !first.body) {
+      console.error("AI request failed", first.status, await first.text());
       throw new HttpError(502, "The AI provider didn't respond.", "ai_unavailable");
     }
 
+    // Saves a proposed action as the user, so row level security records it
+    // in their workspace. Nothing runs until it's approved.
+    async function saveProposal(args: Record<string, unknown>) {
+      const proposal = readProposal(args);
+      if (!proposal) return { event: null, result: { error: "That action isn't valid. Check the invoice id." } };
+
+      const { data: saved, error: saveError } = await auth.client
+        .from("agent_actions")
+        .insert({
+          organization_id: organizationId,
+          chat_id: chatId ?? null,
+          type: proposal.type,
+          payload: { invoice_id: proposal.invoiceId, note: proposal.note },
+          summary: proposal.summary,
+          status: "proposed",
+          proposed_by: auth.userId,
+        })
+        .select("id")
+        .single<{ id: string }>();
+
+      if (saveError) {
+        console.error("Saving proposed action failed", saveError);
+        return { event: null, result: { error: "The action couldn't be saved." } };
+      }
+
+      return {
+        event: {
+          type: "action",
+          action_id: saved.id,
+          action: {
+            action: proposal.type,
+            invoice_id: proposal.invoiceId,
+            note: proposal.note,
+            summary: proposal.summary,
+          },
+          requires_approval: true,
+        },
+        result: { status: "proposed", note: "Shown to the user for approval. It hasn't run." },
+      };
+    }
+
     const encoder = new TextEncoder();
-    const source = upstream.body;
 
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const send = (event: Record<string, unknown>) =>
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-        const toolCalls = new Map<number, { name: string; arguments: string }>();
-        let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
-        let outputChars = 0;
-        const reader = source.pipeThrough(new TextDecoderStream()).getReader();
-        let buffer = "";
+
+        let inputTokens = 0;
+        let outputTokens = 0;
+        let wroteText = false;
 
         try {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += value;
-            const lines = buffer.split("\n");
-            buffer = lines.pop() ?? "";
+          let response: Response | null = first;
 
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (!trimmed.startsWith("data:")) continue;
-              const payload = trimmed.slice(5).trim();
-              if (!payload || payload === "[DONE]") continue;
+          for (let round = 0; round < MAX_ROUNDS && response?.body; round++) {
+            const toolCalls = new Map<number, { id: string; name: string; arguments: string }>();
+            let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined;
+            let roundText = "";
+            const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+            let buffer = "";
 
-              let chunk: {
-                usage?: { prompt_tokens?: number; completion_tokens?: number };
-                choices?: {
-                  delta?: {
-                    content?: string;
-                    tool_calls?: {
-                      index: number;
-                      function?: { name?: string; arguments?: string };
-                    }[];
-                  };
-                }[];
-              };
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              buffer += value;
+              const lines = buffer.split("\n");
+              buffer = lines.pop() ?? "";
+
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith("data:")) continue;
+                const payload = trimmed.slice(5).trim();
+                if (!payload || payload === "[DONE]") continue;
+
+                let chunk: {
+                  usage?: { prompt_tokens?: number; completion_tokens?: number };
+                  choices?: {
+                    delta?: {
+                      content?: string;
+                      tool_calls?: {
+                        index: number;
+                        id?: string;
+                        function?: { name?: string; arguments?: string };
+                      }[];
+                    };
+                  }[];
+                };
+                try {
+                  chunk = JSON.parse(payload);
+                } catch {
+                  continue;
+                }
+
+                const delta = chunk.choices?.[0]?.delta;
+                if (chunk.usage) usage = chunk.usage;
+                if (delta?.content) {
+                  // Separate this round's text from the previous round's.
+                  if (!roundText && wroteText) send({ type: "text", delta: "\n\n" });
+                  roundText += delta.content;
+                  wroteText = true;
+                  send({ type: "text", delta: delta.content });
+                }
+
+                // Tool calls arrive in pieces; collect them until the end.
+                for (const call of delta?.tool_calls ?? []) {
+                  const entry = toolCalls.get(call.index) ?? { id: "", name: "", arguments: "" };
+                  if (call.id) entry.id = call.id;
+                  entry.name += call.function?.name ?? "";
+                  entry.arguments += call.function?.arguments ?? "";
+                  toolCalls.set(call.index, entry);
+                }
+              }
+            }
+
+            // Use the provider's token counts when it sends them, else estimate
+            // at about four characters a token.
+            const argumentChars = [...toolCalls.values()].reduce((n, c) => n + c.arguments.length, 0);
+            inputTokens += usage?.prompt_tokens ?? Math.ceil(JSON.stringify(conversation).length / 4);
+            outputTokens += usage?.completion_tokens ?? Math.ceil((roundText.length + argumentChars) / 4);
+
+            if (toolCalls.size === 0) break;
+
+            const calls: ToolCall[] = [...toolCalls.values()].map((call, i) => ({
+              id: call.id || `call_${round}_${i}`,
+              type: "function",
+              function: { name: call.name, arguments: call.arguments || "{}" },
+            }));
+            conversation.push({ role: "assistant", content: roundText || null, tool_calls: calls });
+
+            for (const call of calls) {
+              let args: Record<string, unknown> = {};
               try {
-                chunk = JSON.parse(payload);
+                const parsed = JSON.parse(call.function.arguments);
+                if (parsed && typeof parsed === "object") args = parsed as Record<string, unknown>;
               } catch {
-                continue;
+                // Treated as no arguments.
               }
 
-              const delta = chunk.choices?.[0]?.delta;
-              if (chunk.usage) usage = chunk.usage;
-              if (delta?.content) {
-                outputChars += delta.content.length;
-                send({ type: "text", delta: delta.content });
+              let result: unknown;
+              if (call.function.name === "propose_action") {
+                const saved = await saveProposal(args);
+                if (saved.event) send(saved.event);
+                result = saved.result;
+              } else if (READ_TOOL_NAMES.has(call.function.name)) {
+                send({ type: "tool", name: call.function.name });
+                result = await runReadTool(auth.client, organizationId, call.function.name, args);
+              } else {
+                result = { error: `Unknown tool ${call.function.name}.` };
               }
 
-              // Tool calls arrive in pieces; collect them until the end.
-              for (const call of delta?.tool_calls ?? []) {
-                const entry = toolCalls.get(call.index) ?? { name: "", arguments: "" };
-                entry.name += call.function?.name ?? "";
-                entry.arguments += call.function?.arguments ?? "";
-                toolCalls.set(call.index, entry);
-              }
-            }
-          }
-
-          for (const call of toolCalls.values()) {
-            if (call.name !== "propose_action") continue;
-            let args: Record<string, unknown>;
-            try {
-              args = JSON.parse(call.arguments);
-            } catch {
-              continue;
-            }
-            const proposal = readProposal(args);
-            if (!proposal) continue;
-
-            // Saved as the user, so row level security records it as their
-            // proposal in their workspace. Nothing runs until it's approved.
-            const { data: saved, error: saveError } = await auth.client
-              .from("agent_actions")
-              .insert({
-                organization_id: organizationId,
-                chat_id: chatId ?? null,
-                type: proposal.type,
-                payload: { invoice_id: proposal.invoiceId, note: proposal.note },
-                summary: proposal.summary,
-                status: "proposed",
-                proposed_by: auth.userId,
-              })
-              .select("id")
-              .single<{ id: string }>();
-
-            if (saveError) {
-              console.error("Saving proposed action failed", saveError);
-              send({ type: "error", message: "A proposed action couldn't be saved." });
-              continue;
+              conversation.push({
+                role: "tool",
+                tool_call_id: call.id,
+                content: JSON.stringify(result).slice(0, MAX_TOOL_RESULT_CHARS),
+              });
             }
 
-            send({
-              type: "action",
-              action_id: saved.id,
-              action: {
-                action: proposal.type,
-                invoice_id: proposal.invoiceId,
-                note: proposal.note,
-                summary: proposal.summary,
-              },
-              requires_approval: true,
-            });
+            if (round === MAX_ROUNDS - 1) {
+              send({ type: "text", delta: `${wroteText ? "\n\n" : ""}I couldn't finish looking that up. Try a narrower question.` });
+              break;
+            }
+
+            response = await callModel();
+            if (!response.ok || !response.body) {
+              console.error("AI request failed", response.status, await response.text());
+              send({ type: "error", message: "The AI provider didn't respond." });
+              break;
+            }
           }
         } catch (streamError) {
           console.error("AI stream failed", streamError);
           send({ type: "error", message: "The response was interrupted." });
         } finally {
-          // Use the provider's token counts when it sends them, else estimate
-          // at about four characters a token.
           try {
-            await recordUsage({
-              userId: auth.userId,
-              organizationId,
-              target,
-              inputTokens:
-                usage?.prompt_tokens ??
-                Math.ceil(
-                  (systemPrompt.length + history.reduce((n, m) => n + m.content.length, 0)) / 4,
-                ),
-              outputTokens: usage?.completion_tokens ?? Math.ceil(outputChars / 4),
-            });
+            await recordUsage({ userId: auth.userId, organizationId, target, inputTokens, outputTokens });
           } catch (usageError) {
             console.error("Recording usage failed", usageError);
           }

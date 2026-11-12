@@ -14,6 +14,15 @@ const PENDING_MESSAGE_KEY = "finobots:pending-message";
 // How many past messages are sent along with a new one.
 const HISTORY_LIMIT = 50;
 
+// What the assistant is looking up, shown while it works.
+const TOOL_LABELS: Record<string, string> = {
+  get_accounts: "your accounts",
+  search_transactions: "your transactions",
+  get_cashflow: "your cash flow",
+  get_connections: "your connections",
+  get_approvals: "your approvals",
+};
+
 type Proposal = { id: string; summary: string; type: string; invoiceId: string };
 
 // Kept outside the component so render stays pure.
@@ -165,6 +174,7 @@ function ChatSession() {
               type: string;
               delta?: string;
               message?: string;
+              name?: string;
               action_id?: string;
               action?: { action: string; invoice_id: string; summary?: string };
             };
@@ -189,6 +199,9 @@ function ChatSession() {
                   summary: action.summary ?? "",
                 },
               ]);
+            } else if (event.type === "tool" && event.name) {
+              // Shown until the reply starts, so the wait has a reason.
+              if (!reply) show(`_Checking ${TOOL_LABELS[event.name] ?? "your data"}…_`);
             } else if (event.type === "error") {
               failed = event.message ?? "The response was interrupted.";
             }
