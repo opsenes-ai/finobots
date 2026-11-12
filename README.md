@@ -20,6 +20,8 @@
 - [Built with](#built-with)
 - [Architecture](#architecture)
 - [App navigation](#app-navigation)
+- [PayPal integration](#paypal-integration)
+- [AG Grid](#ag-grid)
 - [Getting started](#getting-started)
 - [Folder structure](#folder-structure)
 - [Scripts](#scripts)
@@ -95,6 +97,45 @@ Finobots is built to be safe by default: every workspace is isolated with row le
 | Cash flow | Money in and out, trends and forecast |
 | Connections | Connect and manage PayPal |
 | Settings | Profile, personalisation, usage, data, security, notifications and API |
+
+## PayPal integration
+
+Finobots connects to a PayPal REST app, in the sandbox or live, and keeps its data in step with PayPal.
+
+| What | PayPal API | Where it runs |
+| --- | --- | --- |
+| Verify the app's credentials when you connect | OAuth 2.0 client credentials | `connections` function |
+| Sync a balance for each currency | Reporting: balances | `accounts` function |
+| Import transactions, up to 31 days per call, with fees as separate rows | Reporting: transaction search | `transactions` function |
+| Send an invoice or a payment reminder, after you approve it | Invoicing | `actions` function |
+| Record payments as they happen (completed, pending, denied, reversed, refunded) | Webhooks, each event verified with PayPal | `webhooks` function |
+| Optional "Continue with PayPal" sign-in and account linking | Log in with PayPal (OAuth) | Supabase Auth |
+
+How it's kept safe:
+
+- **Credentials stay on the server.** The client secret is checked with PayPal, then encrypted (AES-256-GCM) and stored where only server code can read it. It's never sent back to the browser.
+- **Nothing is sent without approval.** The assistant can only propose an invoice or reminder. An owner or admin approves it, and each action runs at most once.
+- **Webhooks are verified.** Every event is checked with PayPal's signature verification before anything is saved.
+- **Currencies stay separate.** Each PayPal balance currency becomes its own account, and amounts in different currencies are never added together.
+
+To try it, create a REST app in the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/), turn on **Transaction search** and **Invoicing**, then enter its client ID and secret on the **Connections** page. Use **Sync balances** and **Import transactions** from there.
+
+## AG Grid
+
+Finobots uses [AG Grid Community](https://www.ag-grid.com) for its data tables. Every grid shares one wrapper, `components/ui/data-grid.tsx`, which registers the modules once and applies a theme that matches the app's colour, radius and font.
+
+| Page | Grid |
+| --- | --- |
+| Transactions | The ledger: sort, filter, resize, quick search and pagination. Click a row to see its details, double-click to open it |
+| Account details | That account's transactions |
+| Connection details | Latest activity from the connection |
+| Cash flow | Monthly trends, with a pinned totals row |
+| Recents | Chats with search, sorting, inline rename and delete |
+| Settings > Usage | AI usage history: provider, model, tokens, credits and estimated cost |
+| Settings > API | API keys with revoke, and daily requests per key |
+| Settings > Data | Import and export history |
+
+Shared defaults: every column can be sorted, filtered and resized, and pagination only appears when there are more rows than fit on a page. Clicks on buttons inside a cell don't count as row clicks.
 
 ## Getting started
 
@@ -211,7 +252,7 @@ finobots/
 │   │       └── transactions/
 │   ├── shared/
 │   │   └── console/               # profile bar
-│   └── ui/                        # shadcn/ui components
+│   └── ui/                        # shadcn/ui components and the AG Grid wrapper
 ├── lib/
 │   ├── auth/                      # sessions, profile, server actions
 │   ├── client.ts                  # browser Supabase client and helpers
@@ -265,7 +306,7 @@ finobots/
 
 ## Roadmap
 
-Planned work includes assistant access to account and transaction data, invoice creation, automatic transaction matching, email notifications and more payment providers. See the [Roadmap](ROADMAP.md) for details.
+Planned work includes invoice creation, automatic transaction matching, email notifications and more payment providers. See the [Roadmap](ROADMAP.md) for details.
 
 ## Contributing
 
