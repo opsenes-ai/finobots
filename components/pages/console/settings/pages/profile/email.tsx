@@ -1,17 +1,25 @@
-import { Skeleton } from "@/components/ui/skeleton";
+"use client";
 
-// Email address and verification.
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/client";
+import { CopyField } from "./personal";
+
+// Email address, shown for reference with a copy button. Not editable.
 export function ProfileEmail() {
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await createClient().auth.getUser();
+      setEmail(data.user?.email ?? null);
+    }
+    void load();
+  }, []);
+
   return (
     <section className="space-y-3">
       <h3 className="text-sm font-medium">Email</h3>
-      <div className="flex items-end gap-2">
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="h-8 w-full" />
-        </div>
-        <Skeleton className="h-8 w-20" />
-      </div>
+      <CopyField id="email" label="Email" value={email} />
     </section>
   );
 }

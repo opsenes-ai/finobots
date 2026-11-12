@@ -1,6 +1,7 @@
 import {
   ProfileAvatar,
   ProfileEmail,
+  ProfileIds,
   ProfilePersonal,
 } from "@/components/pages/console/settings/pages/profile";
 
@@ -11,6 +12,7 @@ export default function ProfileSettingsPage() {
       <ProfileAvatar />
       <ProfilePersonal />
       <ProfileEmail />
+      <ProfileIds />
     </div>
   );
 }

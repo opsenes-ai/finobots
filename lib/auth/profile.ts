@@ -33,5 +33,13 @@ export async function getProfile(): Promise<Profile | null> {
     .eq("id", userId)
     .maybeSingle<Profile>();
 
-  return data;
+  if (!data?.avatar_url) return data;
+
+  // avatar_url holds a path in the private avatars bucket. Swap it for a
+  // signed link that lasts an hour, so the sidebar can show the picture.
+  const { data: signed } = await supabase.storage
+    .from("avatars")
+    .createSignedUrl(data.avatar_url, 3600);
+
+  return { ...data, avatar_url: signed?.signedUrl ?? null };
 }
