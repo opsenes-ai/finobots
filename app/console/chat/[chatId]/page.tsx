@@ -303,10 +303,15 @@ function ChatSession() {
   }
 
   return (
-    // Fills the console area inside the p-6 padding, with the message input
-    // at the bottom.
-    <div className="mx-auto flex h-[calc(100svh-3rem)] w-full max-w-3xl flex-col">
-      <ProposedActions items={proposals} busyId={deciding} onDecide={decide} />
+    // Cancels the console's p-6 padding and fills the whole area, so the
+    // message list scrolls with its scrollbar at the right edge of the screen
+    // and the input stays at the bottom. The chat adds its own padding.
+    <div className="-m-6 flex h-svh flex-col">
+      {proposals.length > 0 ? (
+        <div className="mx-auto w-full max-w-3xl px-6 pt-6">
+          <ProposedActions items={proposals} busyId={deciding} onDecide={decide} />
+        </div>
+      ) : null}
       <div className="min-h-0 flex-1">
         <Chat
           className="h-full"

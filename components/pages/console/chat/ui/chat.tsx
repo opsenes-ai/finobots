@@ -216,7 +216,7 @@ export function Chat({
       ) : null}
 
       <ChatForm
-        className="mt-auto"
+        className="mx-auto mt-auto w-full max-w-3xl px-6 pb-6"
         isPending={isGenerating || isTyping}
         handleSubmit={handleSubmit}
       >
@@ -254,18 +254,18 @@ export function ChatMessages({
 
   return (
     <div
-      className="grid grid-cols-1 overflow-y-auto pb-4"
+      className="grid grid-cols-1 overflow-y-auto px-6 pt-6 pb-4"
       ref={containerRef}
       onScroll={handleScroll}
       onTouchStart={handleTouchStart}
     >
-      <div className="max-w-full [grid-column:1/1] [grid-row:1/1]">
+      <div className="mx-auto w-full max-w-3xl [grid-column:1/1] [grid-row:1/1]">
         {children}
       </div>
 
       {!shouldAutoScroll && (
         <div className="pointer-events-none flex flex-1 items-end justify-end [grid-column:1/1] [grid-row:1/1]">
-          <div className="sticky bottom-0 left-0 flex w-full justify-end">
+          <div className="sticky bottom-0 left-0 mx-auto flex w-full max-w-3xl justify-end">
             <Button
               onClick={scrollToBottom}
               className="pointer-events-auto h-8 w-8 rounded-full ease-in-out animate-in fade-in-0 slide-in-from-bottom-1"
