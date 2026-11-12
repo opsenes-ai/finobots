@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { ColDef } from "ag-grid-community";
-import { DataGrid } from "@/components/shared/console/data-grid";
+import { DataGrid } from "@/components/ui/data-grid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatMoney } from "@/lib/utils";
 import { monthLabel } from "./canvas";

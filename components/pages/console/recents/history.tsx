@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { CellValueChangedEvent, ColDef } from "ag-grid-community";
 import { toast } from "sonner";
-import { DataGrid } from "@/components/shared/console/data-grid";
+import { DataGrid } from "@/components/ui/data-grid";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/client";
 import { formatDate } from "@/lib/utils";

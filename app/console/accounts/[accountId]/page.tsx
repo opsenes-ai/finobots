@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ColDef } from "ag-grid-community";
-import { DataGrid } from "@/components/shared/console/data-grid";
+import { DataGrid } from "@/components/ui/data-grid";
 import {
   AccountDetails,
   AccountEditing,

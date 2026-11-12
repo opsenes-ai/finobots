@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient, functionErrorMessage, getWorkspaceId } from "@/lib/client";
 import type { ColDef } from "ag-grid-community";
-import { DataGrid } from "@/components/shared/console/data-grid";
+import { DataGrid } from "@/components/ui/data-grid";
 import { formatDate } from "@/lib/utils";
 import { API_SCOPES } from "./scopes";
 

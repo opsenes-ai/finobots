@@ -6,7 +6,7 @@ import { type ColDef, type ValueFormatterParams } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { gridTheme } from "@/components/shared/console/data-grid";
+import { gridTheme } from "@/components/ui/data-grid";
 import { createClient, createResource, createStore, getWorkspaceId } from "@/lib/client";
 import { formatDate, formatMoney } from "@/lib/utils";
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ColDef } from "ag-grid-community";
-import { DataGrid } from "@/components/shared/console/data-grid";
+import { DataGrid } from "@/components/ui/data-grid";
 import { createClient, getWorkspaceId } from "@/lib/client";
 import { formatDate } from "@/lib/utils";
 
